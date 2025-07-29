@@ -1,2 +1,2 @@
 # collinsia-field-work
-CP field data
+This repo is dedicated to all of the Collinsia field data. 
