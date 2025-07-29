@@ -26,6 +26,43 @@ mc_error <- mica_creek_df[188,]
 mc_error %>% 
   separate_rows(c(Dn1, Dn2), sep = ",")
 
+# how about totaling all damage?
+# or, create a proportion of damage type based on site?
+
+mc_test_df[mc_test_df =='na'] <- NA
+mc_test_df %>% 
+  select(Site, D1_p) %>% 
+  mutate(D1_p = as.numeric(D1_p)) %>% 
+  drop_na() %>% 
+  group_by(Site) %>% 
+  summarise(
+    mean = mean(D1_p)
+  ) %>% 
+  ggplot(aes(x = Site, y = mean))+
+  geom_point()+
+  labs(title = "Damage type 1")
+
+
+mc_prop_df <- mica_creek_df
+mc_prop_df[mc_prop_df =='na'] <- NA
+mc_prop_df %>% 
+  select(Site, D1_p) %>% 
+  mutate(D1_p = as.numeric(D1_p),
+         Site = as.character(Site)) %>% 
+  drop_na() %>% 
+  group_by(Site) %>% 
+  summarise(
+    mean = mean(D1_p)
+  ) %>% 
+  ggplot(aes(x = Site, y = mean))+
+  geom_point()+
+  labs(title = "Damage type 1")
+
+
+
+
+
+
 # exploration ####
 no_node_mc <- mica_creek_df %>% 
   select(!c(Dn1, Dn2, suck_mite_n, suck_thrips_n, Dn5, Dn4, Dn6)) %>% 
