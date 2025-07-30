@@ -26,6 +26,9 @@ mc_error <- mica_creek_df[188,]
 mc_error %>% 
   separate_rows(c(Dn1, Dn2), sep = ",")
 
+
+# Mica Creek early plots #### 
+
 # how about totaling all damage?
 # or, create a proportion of damage type based on site?
 
@@ -85,15 +88,17 @@ resp_var <- names(prelim_fxn_df[2:8])
 resp_var <-set_names(resp_var)
 
 dot_plots <- function(x,y){
-  ggplot(prelim_fxn_df, aes(x = .data[[x]], y = data[[y]]))+
+  ggplot(prelim_fxn_df, aes(x = .data[[x]], y = .data[[y]]))+
     geom_point()+
     theme_bw()
 }
 
-prelim_plots <- map(resp_var, ~dot_plots(.y, 'Site'))
-ggarrange(plotlist = prelim_plots)
+# to accomplish looping across the response variable, you have to nest the exp within. double map! 
 
-
+plo1 <- map(resp_var,
+            ~map(exp_var, dot_plots, y = .x))
+mc_prelim_plots <- ggarrange(plotlist = resp_plots)
+pdf('mc_prelim_plots.pdf')
 
 # exploration ####
 no_node_mc <- mica_creek_df %>% 
