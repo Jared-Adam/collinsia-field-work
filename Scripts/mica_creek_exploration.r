@@ -78,9 +78,6 @@ mc_prop_df %>%
   labs(title = "Damage type 1")
 
 
-# fxn for the different damage types 
-# sort the df to get the damage types in order
-
 prelim_fxn_df <- mc_prop_df %>% 
   select(Site, D1_p, D2_p, suck_mite_p, suck_thrips_p, D5_p, D4_p, D6_p) %>% 
   mutate_at(vars(2:8), as.numeric) %>% 
@@ -124,5 +121,73 @@ mc_plot_pdf <- ggarrange(plotlist = plo1_list)
 mc_plot_pdf
 pdf('mc_plot_pdf.pdf')
 dev.off()
+
+# further exploration ####
+
+colnames(mc_prop_df)
+fe_df <- mc_prop_df %>% 
+  select(Site, Date, Quadrat, D6_ct, PH, PD, FlC, FrC) %>% 
+  mutate_at(vars(3:8), as.numeric) %>% 
+  rename(date = Date,
+         site = Site,
+         q = Quadrat) %>% 
+  mutate(date = as.Date(date, "%m/%d/%Y"),
+         site = as.factor(site),
+         q = as.factor(q)) %>% 
+  filter(D6_ct != 'NA',) %>% 
+  group_by(site, q) %>% 
+  summarise(
+    mine.ctm = mean(D6_ct),
+    phm = mean(PH, na.rm = TRUE),
+    pdm = mean(PD, na.rm = TRUE),
+    flower.ctm = mean(FlC),
+    fruit.ctm = mean(FrC)) %>% 
+  print(N = inf)
+
+
+q.labs <- c("Sun", "Shade")
+names(q.labs) <- c('1', '2')
+
+ggplot(fe_df, aes(x = site, y = pdm))+
+  geom_point()+
+  ylim(0, NA)+
+  facet_wrap(~q, 
+             labeller = labeller(q = q.labs))
+  
+
+exp_var <- names(fe_df[1])
+exp_var <- set_names(exp_var)
+
+resp_var <- names(fe_df[3:7])
+resp_var <-set_names(resp_var)
+
+dot_plots <- function(x,y){
+  ggplot(fe_df, aes(x = .data[[x]], y = .data[[y]]))+
+    geom_point(aes(size = 3, color = q))+
+    facet_wrap(~q, 
+               labeller = labeller(q = q.labs))+
+    ylim(0,NA)+
+    theme_bw()+
+    theme(
+      legend.position = 'none',
+      axis.text = element_text(size = 14)
+    )+
+    labs(title = 'Mica Creek')
+}
+
+
+mc_xtra_plots <- map(resp_var,
+            ~map(exp_var, dot_plots, y = .x))
+mc_xtra_plots_list <- map(mc_xtra_plots ,~cowplot::plot_grid(plotlist = .x))
+ggarrange(plotlist = mc_xtra_plots_list)
+
+
+
+?ylim
+
+
+
+
+
 
 
