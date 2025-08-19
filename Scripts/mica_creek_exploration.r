@@ -36,7 +36,7 @@ no_node_mc <- mica_creek_df %>%
   mutate_at(vars(6:20), as.numeric) %>% 
   mutate_at(vars(1,3,4,5), as.factor)
 
-ggplot(no_node_df, aes(y = D2_p, x = Site))+
+ggplot(no_node_mc, aes(y = D2_p, x = Site))+
   geom_point()+
   geom_abline()
 
@@ -82,13 +82,19 @@ prelim_fxn_df <- mc_prop_df %>%
   select(Site, Quadrat, Date, D1_p, D2_p, suck_mite_p, suck_thrips_p, D5_p, D4_p, D6_p,
          D6_ct, PH, PD, FlC, FrC) %>% 
   mutate_at(vars(4:15), as.numeric) %>% 
-  rename(site = Site,
-         q = Quadrat,
+  rename(q = Quadrat,
          date = Date) %>% 
+  mutate(elevation = case_when(Site == 1 ~ '6100',
+                               Site == 2 ~ '6700',
+                               Site == 3 ~ '7300',
+                               Site == 4 ~ '8200',
+                               Site == 5 ~ '8800',
+                               Site == 6 ~ '9100')) %>% 
   mutate(date = as.Date(date, "%m/%d/%Y")) %>% 
-  mutate_at(vars(1:2), as.factor) %>% 
+  relocate(elevation) %>% 
+  mutate_at(vars(1:3), as.factor) %>% 
   filter(D1_p != 'NA') %>% 
-  group_by(site, q) %>% 
+  group_by(elevation, q) %>% 
   summarise(
     edge_nmv_m = mean(D1_p), 
     edge_mv_m = mean(D2_p), 
@@ -141,7 +147,7 @@ dot_plots <- function(x,y){
     theme_bw()+
     theme(
       legend.position = 'none',
-      axis.text = element_text(size = 14)
+      axis.text = element_text(size = 10)
     )+
     labs(title = 'Mica Creek')
 }
