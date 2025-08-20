@@ -36,7 +36,7 @@ no_node_mc <- mica_creek_df %>%
   mutate_at(vars(6:20), as.numeric) %>% 
   mutate_at(vars(1,3,4,5), as.factor)
 
-ggplot(no_node_df, aes(y = D2_p, x = Site))+
+ggplot(no_node_mc, aes(y = D2_p, x = Site))+
   geom_point()+
   geom_abline()
 
@@ -79,48 +79,93 @@ mc_prop_df %>%
 
 
 prelim_fxn_df <- mc_prop_df %>% 
-  select(Site, D1_p, D2_p, suck_mite_p, suck_thrips_p, D5_p, D4_p, D6_p) %>% 
-  mutate_at(vars(2:8), as.numeric) %>% 
-  mutate(Site = as.character(Site)) %>% 
- # drop_na() %>% 
+  select(Site, Quadrat, Date, D1_p, D2_p, suck_mite_p, suck_thrips_p, D5_p, D4_p, D6_p,
+         D6_ct, PH, PD, FlC, FrC) %>% 
+  mutate_at(vars(4:15), as.numeric) %>% 
+  rename(q = Quadrat,
+         date = Date) %>% 
+  mutate(elevation = case_when(Site == 1 ~ '6100',
+                               Site == 2 ~ '6700',
+                               Site == 3 ~ '7300',
+                               Site == 4 ~ '8200',
+                               Site == 5 ~ '8800',
+                               Site == 6 ~ '9100')) %>% 
+  mutate(date = as.Date(date, "%m/%d/%Y")) %>% 
+  relocate(elevation) %>% 
+  mutate_at(vars(1:3), as.factor) %>% 
   filter(D1_p != 'NA') %>% 
-  group_by(Site) %>% 
+  group_by(elevation, q) %>% 
   summarise(
-    d1m = mean(D1_p), 
-    d2m = mean(D2_p), 
+    edge_nmv_m = mean(D1_p), 
+    edge_mv_m = mean(D2_p), 
     suckm = mean(suck_mite_p),
     thripm = mean(suck_thrips_p),
-    d5m = mean(D5_p), 
-    d4m = mean(D4_p), 
-    d6m = mean(D6_p)
-  )
+    scape_m = mean(D5_p), 
+    hole_m = mean(D4_p), 
+    mine_m = mean(D6_p),
+    mine.ctm = mean(D6_ct),
+    phm = mean(PH, na.rm = TRUE),
+    pdm = mean(PD, na.rm = TRUE),
+    flower.ctm = mean(FlC),
+    fruit.ctm = mean(FrC)) %>% 
+  print(N = inf)
+  
+
+test <- prelim_fxn_df %>% 
+  pivot_longer(
+    cols = edge_nmv_m:fruit.ctm,
+    names_to = 'variables',
+    values_to = 'mean'
+  ) %>% 
+  print(N = inf)
+
+test %>% 
+  filter(variables != 'suckm' & variables != 'thripm' & variables != 'scape_m') %>% 
+ggplot(aes(x = site, y = mean, color = q, shape = q))+
+  geom_point(size = 4)+
+  facet_grid(~ variables, labeller = labeller(q = q.labs))
+
+?select
 
 # plotting function ####
 
-exp_var <- names(prelim_fxn_df[1])
-exp_var <- set_names(exp_var)
+dmg_exp_var <- names(prelim_fxn_df[1])
+dmg_exp_var <- set_names(dmg_exp_var)
 
-resp_var <- names(prelim_fxn_df[2:8])
-resp_var <-set_names(resp_var)
+dmg_resp_var <- names(prelim_fxn_df[3:14])
+dmg_resp_var <-set_names(dmg_resp_var)
+
+q.labs <- c("Sun", "Shade")
+names(q.labs) <- c('1', '2')
 
 dot_plots <- function(x,y){
   ggplot(prelim_fxn_df, aes(x = .data[[x]], y = .data[[y]]))+
-    geom_point()+
+    geom_point(aes(size = 3, color = q))+
+    facet_wrap(~q, 
+               labeller = labeller(q = q.labs))+
+    ylim(0,NA)+
     theme_bw()+
+    theme(
+      legend.position = 'none',
+      axis.text = element_text(size = 8)
+    )+
     labs(title = 'Mica Creek')
 }
 
-# to accomplish looping across the response variable, you have to nest the exp within. double map! 
+#damage percentage plots 
 
-plo1 <- map(resp_var,
-            ~map(exp_var, dot_plots, y = .x))
-# turn the plots into a list 
+plo1 <- map(dmg_resp_var,
+            ~map(dmg_exp_var, dot_plots, y = .x))
 plo1_list <- map(plo1 ,~cowplot::plot_grid(plotlist = .x))
-# combine the list 
-mc_plot_pdf <- ggarrange(plotlist = plo1_list)
-mc_plot_pdf
-pdf('mc_plot_pdf.pdf')
-dev.off()
+ggarrange(plotlist = plo1_list)
+
+#other variable plots 
+
+fitness_exp_var <- names(prelim_fxn_df[1])
+fitness_exp_var <- set_names(fitness_exp_var)
+
+fitness_resp_var <- names(prelim_fxn_df[3:7])
+fitness_resp_var <-set_names(fitness_resp_var)
 
 # further exploration ####
 
@@ -191,3 +236,7 @@ ggarrange(plotlist = mc_xtra_plots_list)
 
 
 
+mc_xtra_plots <- map(fitness_resp_var,
+            ~map(fitness_exp_var, dot_plots, y = .x))
+mc_xtra_plots_list <- map(mc_xtra_plots ,~cowplot::plot_grid(plotlist = .x))
+ggarrange(plotlist = mc_xtra_plots_list)
