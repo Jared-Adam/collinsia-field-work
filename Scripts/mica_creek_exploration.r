@@ -132,7 +132,7 @@ ggplot(aes(x = site, y = mean, color = q, shape = q))+
 dmg_exp_var <- names(prelim_fxn_df[1])
 dmg_exp_var <- set_names(dmg_exp_var)
 
-dmg_resp_var <- names(prelim_fxn_df[3:9])
+dmg_resp_var <- names(prelim_fxn_df[3:14])
 dmg_resp_var <-set_names(dmg_resp_var)
 
 q.labs <- c("Sun", "Shade")
@@ -147,7 +147,7 @@ dot_plots <- function(x,y){
     theme_bw()+
     theme(
       legend.position = 'none',
-      axis.text = element_text(size = 10)
+      axis.text = element_text(size = 8)
     )+
     labs(title = 'Mica Creek')
 }
