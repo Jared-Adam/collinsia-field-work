@@ -5,7 +5,7 @@ library(ggpubr)
 # data ####
 mica_creek_df <- X2025_7_15_MC_field_data_online_entry
 
-# wrangling ####
+# comma separated attempt at wrangling ####
 
 colnames(mica_creek_df)
 mica_creek_df <- mica_creek_df %>% 
@@ -84,7 +84,8 @@ prelim_fxn_df <- mc_prop_df %>%
   print(N = inf)
   
 
-# now for the hole df and I will plot the means. 
+# raw data cleaning for jitter plots
+# now for the whole df and I will plot the means. 
   # I think I will need to group by elevation and q still, if possible
 
 raw_df <- mc_prop_df %>% 
@@ -101,17 +102,18 @@ raw_df <- mc_prop_df %>%
                                Site == 5 ~ '8800',
                                Site == 6 ~ '9100')) %>% 
   relocate(elevation) %>% 
-  select(!c(Site, Date)) %>% 
+  select(!c(Site, Date,suck_mite_p, suck_thrips_p, D5_p)) %>% 
   mutate_at(vars(1:2), as.factor)%>% 
   filter(D1_p != 'NA') 
 
 ggplot(raw_df, aes(x = elevation, y = D1_p))+
   geom_point()+
+  stat_summary(fun = 'mean', color = 'red', geom = 'point', size = 5)+
   facet_wrap(~q)
   
   
-?select
 
+# looking to pivot long, ignore for now
 
 test <- prelim_fxn_df %>% 
   pivot_longer(
@@ -129,7 +131,7 @@ ggplot(aes(x = site, y = mean, color = q, shape = q))+
 
 ?select
 
-# plotting function ####
+# plotting all variables ####
 
 dmg_exp_var <- names(prelim_fxn_df[1])
 dmg_exp_var <- set_names(dmg_exp_var)
@@ -154,22 +156,59 @@ dot_plots <- function(x,y){
     labs(title = 'Mica Creek')
 }
 
-#damage percentage plots 
-
 plo1 <- map(dmg_resp_var,
             ~map(dmg_exp_var, dot_plots, y = .x))
 plo1_list <- map(plo1 ,~cowplot::plot_grid(plotlist = .x))
 ggarrange(plotlist = plo1_list)
 
-#other variable plots 
 
-fitness_exp_var <- names(prelim_fxn_df[1])
-fitness_exp_var <- set_names(fitness_exp_var)
+##
 
-fitness_resp_var <- names(prelim_fxn_df[3:7])
-fitness_resp_var <-set_names(fitness_resp_var)
+## plots for the raw data with mean and jitter ####
 
-# further exploration ####
+raw_exp_var <- names(raw_df[1])
+raw_exp_var <- set_names(raw_exp_var)
+
+raw_resp_var <- names(raw_df[3:11])
+raw_resp_var <- set_names(raw_resp_var)
+
+q.labs <- c("Sun", "Shade")
+names(q.labs) <- c('1', '2')
+
+raw_plot <- function(x,y){
+  ggplot(raw_df, aes(x = .data[[x]], y = .data[[y]]))+
+    geom_point(aes(color = q))+
+    facet_wrap(~q, 
+               labeller = labeller(q = q.labs))+
+    stat_summary(fun = 'mean', color = 'red', size = 5, geom = 'point')+
+    ylim(0,NA)+
+    theme_bw()+
+    theme(
+      legend.position = 'none',
+      axis.text = element_text(size = 8)
+    )+
+    labs(title = 'Mica Creek')
+    
+}
+
+
+raw_plo <- map(raw_resp_var,
+            ~map(raw_exp_var, raw_plot, y = .x))
+raw_plo_list <- map(raw_plo ,~cowplot::plot_grid(plotlist = .x))
+ggarrange(plotlist = raw_plo_list)
+
+##
+
+
+# misc ####
+
+# fitness_exp_var <- names(prelim_fxn_df[1])
+# fitness_exp_var <- set_names(fitness_exp_var)
+# 
+# fitness_resp_var <- names(prelim_fxn_df[3:7])
+# fitness_resp_var <-set_names(fitness_resp_var)
+
+# exploring the variables that are not damage ####
 
 colnames(mc_prop_df)
 fe_df <- mc_prop_df %>% 
