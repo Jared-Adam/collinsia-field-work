@@ -39,7 +39,35 @@ tg_prelim_fx_df <- tg_mean_df %>%
     fruit.ctm = mean(FrC)
   )
 
-# plotting function ####
+## 
+
+# raw data for mean over jitter
+colnames(tg_mean_df)
+
+tg_raw_df <- tg_mean_df %>% 
+  rename(suck_mite_p = 'suck-mite_p',
+         EFN_ct = 'EFN ct',
+         q = Quadrat
+         ) %>% 
+  filter(D1_p != 'NA') %>% 
+  mutate(elevation = case_when(Site == 1 ~ '5400',
+                               Site == 2 ~ '6100',
+                               Site == 3 ~ '6900',
+                               Site == 4 ~ '7600',
+                               Site == 5 ~ '8360')) %>% 
+    select(Site, q, Date, D1_p, D2_p,D4_p, D6_p,
+         D6_ct, PH, PD, FlC, FrC, elevation) %>% 
+  relocate(elevation) %>% 
+  mutate_at(vars(1:4), as.factor) %>% 
+  mutate_at(vars(5:13), as.numeric)
+
+
+
+
+
+
+
+# plotting mean values ####
 
 tg_exp_var <- names(tg_prelim_fx_df[1])
 tg_exp_var <- set_names(tg_exp_var)
@@ -71,6 +99,7 @@ plo3_list <- map(plo3 ,~cowplot::plot_grid(plotlist = .x))
 ggarrange(plotlist = plo3_list)
 
 
+# plotting mean of d6 ####
 
 tg_mean_df %>% 
   mutate(elevation = case_when(Site == 1 ~ '5400',
@@ -99,3 +128,38 @@ tg_mean_df %>%
   )+
   labs(title = 'Truman Gulch mine mean dmg')
 
+# plotting raw over mean ####
+
+tg_raw_df
+
+
+tg_raw_exp_var <- names(tg_raw_df[1])
+tg_raw_exp_var <- set_names(tg_raw_exp_var)
+
+tg_raw_resp_var <- names(tg_raw_df[5:13])
+tg_raw_resp_var <- set_names(tg_raw_resp_var)
+
+q.labs <- c("Sun", "Shade")
+names(q.labs) <- c('1', '2')
+
+tg_raw_plot <- function(x,y){
+  ggplot(tg_raw_df, aes(x = .data[[x]], y = .data[[y]]))+
+    geom_point(aes(color = q))+
+    facet_wrap(~q, 
+               labeller = labeller(q = q.labs))+
+    stat_summary(fun = 'mean', color = 'red', size = 5, geom = 'point')+
+    ylim(0,NA)+
+    theme_bw()+
+    theme(
+      legend.position = 'none',
+      axis.text = element_text(size = 8)
+    )+
+    labs(title = 'Truman Gulch')
+  
+}
+
+
+tg_raw_plo <- map(tg_raw_resp_var,
+               ~map(tg_raw_exp_var, tg_raw_plot, y = .x))
+tg_raw_plo_list <- map(tg_raw_plo ,~cowplot::plot_grid(plotlist = .x))
+ggarrange(plotlist = tg_raw_plo_list)
