@@ -163,3 +163,31 @@ tg_raw_plo <- map(tg_raw_resp_var,
                ~map(tg_raw_exp_var, tg_raw_plot, y = .x))
 tg_raw_plo_list <- map(tg_raw_plo ,~cowplot::plot_grid(plotlist = .x))
 ggarrange(plotlist = tg_raw_plo_list)
+
+
+# d6 raw with jitter ####
+
+tg_mean_df %>% 
+  mutate(elevation = case_when(Site == 1 ~ '5400',
+                               Site == 2 ~ '6100',
+                               Site == 3 ~ '6900',
+                               Site == 4 ~ '7600',
+                               Site == 5 ~ '8360')) %>% 
+  rename(q = Quadrat) %>% 
+  select(elevation, q, D6_p) %>% 
+  rename(mine = D6_p) %>% 
+  drop_na() %>% 
+  mutate(mine = as.numeric(mine),
+         elevation = as.factor(elevation),
+         q = as.factor(q)) %>%
+  ggplot(aes(x = elevation, y = mine))+
+  facet_wrap(~q,
+             labeller = labeller(q = q.labs))+
+  geom_point(aes(size = 3, color = q))+
+  stat_summary(fun = 'mean', color = 'red', size = 10, geom = 'point')+
+  theme_bw()+
+  theme(
+    legend.position = 'none',
+    axis.text = element_text(size = 10)
+  )+
+  labs(title = 'Truman Gulch mine mean dmg')
