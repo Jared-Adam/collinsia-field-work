@@ -221,3 +221,29 @@ rw_raw_df <- rw_mean_df %>%
   relocate(elevation) %>% 
   mutate_at(vars(1:4), as.factor) %>% 
   mutate_at(vars(5:13), as.numeric)
+
+
+# Merging all RAW dfs ####
+
+rw_raw_df
+tg_raw_df
+mc_raw_df
+
+tg_merge <- tg_raw_df %>% 
+  select(!c(Site, Date)) %>% 
+  mutate(loc = 'TG')
+
+rw_merge <- rw_raw_df %>% 
+  select(!c(Site, Date)) %>% 
+  mutate(loc = 'RW')
+
+mc_merge <- mc_raw_df %>% 
+  mutate(loc = 'MC')
+
+
+merged_df <- rbind(rw_merge, tg_merge, mc_merge) %>% 
+  relocate(loc) %>% 
+  mutate(loc = as.factor(loc)) %>% 
+  print(n = 10)
+
+
