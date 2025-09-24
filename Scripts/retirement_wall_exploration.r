@@ -2,65 +2,6 @@
 library(tidyverse)
 library(ggpubr)
 
-# data ####
-rw_df <- X2025_7_22_RW_field_data_online_entry
-
-# wrangle  ####
-rw_df
-rw_mean_df <- rw_df
-rw_mean_df[rw_mean_df == 'na'] <- NA
-
-# removed damage 6 bc the NAs were causing a fuss. Will plot that damage indep of the loop
-colnames(rw_mean_df)
-rw_prelim_fxn_df <- rw_mean_df %>% 
-  rename(suck_mite_p = 'suck-mite_p',
-         q = Quadrat) %>% 
-  filter(D1_p != 'NA') %>% 
-  mutate(elevation = case_when(Site == 1 ~ '5600',
-                               Site == 2 ~ '6050',
-                               Site == 3 ~ '6700',
-                               Site == 4 ~ '6900',
-                               Site == 5 ~ '7300')) %>% 
-  select(elevation, q, D1_p, D2_p, suck_mite_p, D5_p, D4_p, PH, PD, FlC, FrC) %>% 
-  mutate_at(vars(3:11), as.numeric) %>% 
-  mutate_at(vars(1:2), as.factor) %>% 
-  mutate(elevation = as.character(elevation)) %>% 
-  group_by(elevation, q) %>% 
-  summarise(
-    edge_no_mv = mean(D1_p), 
-    edge_mv = mean(D2_p), 
-    suckm = mean(suck_mite_p),
-    scape = mean(D5_p), 
-    hole = mean(D4_p),
-    height_m = mean(PH), 
-    diam_m = mean(PD),
-    flower_ct = mean(FlC),
-    fruit_ct = mean(FrC)
-  ) %>% 
-  print(n = Inf)
-rw_prelim_fxn_df
-
-##
-
-# raw values for jitter 
-colnames(rw_mean_df)
-
-rw_raw_df <- rw_mean_df %>% 
-  rename(suck_mite_p = 'suck-mite_p',
-         q = Quadrat
-  ) %>% 
-  filter(D1_p != 'NA') %>% 
-  mutate(elevation = case_when(Site == 1 ~ '5600',
-                               Site == 2 ~ '6050',
-                               Site == 3 ~ '6700',
-                               Site == 4 ~ '6900',
-                               Site == 5 ~ '7300')) %>% 
-  select(Site, q, Date, D1_p, D2_p,D4_p,
-          PH, PD, FlC, FrC, elevation) %>% 
-  relocate(elevation) %>% 
-  mutate_at(vars(1:4), as.factor) %>% 
-  mutate_at(vars(5:11), as.numeric)
-
 
 # plotting all but 6 ####
 
