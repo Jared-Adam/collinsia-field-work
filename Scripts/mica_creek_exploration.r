@@ -5,6 +5,8 @@ library(ggpubr)
 
 # plotting all variables ####
 
+# changed df to mc_prelim_fxn_df on 9/24/2025
+
 dmg_exp_var <- names(prelim_fxn_df[1])
 dmg_exp_var <- set_names(dmg_exp_var)
 

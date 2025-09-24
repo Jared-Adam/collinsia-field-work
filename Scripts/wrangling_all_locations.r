@@ -10,50 +10,13 @@ rw_df <- X2025_7_22_RW_field_data_online_entry
 
 # Mica Creek ####
 
-
-# comma separated attempt at wrangling 
-
-colnames(mica_creek_df)
-mica_creek_df <- mica_creek_df %>% 
-  rename(suck_mite_p = 'suck-mite_p',
-         suck_mite_n = 'suck-mite_n3',
-         suck_thrips_p = 'suck-thrips_p',
-         suck_thrips_n = 'suck-thrips_n')
-
-# the below code is unresolved 7/31/2025
-# test to see the best way to split the node columns, BUT this does not work if the values match 
-# mc_test_df <- mica_creek_df[1:100,]
-# mc_test_df %>% 
-#   separate_rows(c(Dn1, Dn2, suck_mite_n, suck_thrips_n, Dn4, Dn5, Dn6), sep = ",")
-# 
-# # adding this to a new df 
-# mica_creek_df %>% 
-#   separate_rows(c(Dn1, Dn2, suck_mite_n, suck_thrips_n, Dn4, Dn5, Dn6), sep = ",")
-# 
-# mc_error <- mica_creek_df[188,]
-# mc_error %>% 
-#   separate_rows(c(Dn1, Dn2), sep = ",")
-# 
-
-# exploration 
-
-no_node_mc <- mica_creek_df %>% 
-  select(!c(Dn1, Dn2, suck_mite_n, suck_thrips_n, Dn5, Dn4, Dn6)) %>% 
-  mutate_at(vars(6:20), as.numeric) %>% 
-  mutate_at(vars(1,3,4,5), as.factor)
-
-ggplot(no_node_mc, aes(y = D2_p, x = Site))+
-  geom_point()+
-  geom_abline()
-
 # wrangling 
-
 
 mc_prop_df <- mica_creek_df
 mc_prop_df[mc_prop_df =='na'] <- NA
 
 # collect the means 
-prelim_fxn_df <- mc_prop_df %>% 
+mc_prelim_fxn_df <- mc_prop_df %>% 
   rename(suck_mite_p = `suck-mite_p`,
          suck_thrips_p = `suck-thrips_p`) %>% 
   select(Site, Quadrat, Date, D1_p, D2_p, suck_mite_p, suck_thrips_p, D5_p, D4_p, D6_p,
@@ -92,7 +55,7 @@ prelim_fxn_df <- mc_prop_df %>%
 # now for the whole df and I will plot the means. 
 # I think I will need to group by elevation and q still, if possible
 
-raw_df <- mc_prop_df %>% 
+mc_raw_df <- mc_prop_df %>% 
   rename(suck_mite_p = `suck-mite_p`,
          suck_thrips_p = `suck-thrips_p`,
          q = Quadrat) %>% 
@@ -110,28 +73,26 @@ raw_df <- mc_prop_df %>%
   mutate_at(vars(1:2), as.factor)%>% 
   filter(D1_p != 'NA') 
 
-ggplot(raw_df, aes(x = elevation, y = D1_p))+
+ggplot(mc_raw_df, aes(x = elevation, y = D1_p))+
   geom_point()+
   stat_summary(fun = 'mean', color = 'red', geom = 'point', size = 5)+
   facet_wrap(~q)
 
 # looking to pivot long, ignore for now
 
-test <- prelim_fxn_df %>% 
-  pivot_longer(
-    cols = edge_nmv_m:fruit.ctm,
-    names_to = 'variables',
-    values_to = 'mean'
-  ) %>% 
-  print(N = inf)
-
-test %>% 
-  filter(variables != 'suckm' & variables != 'thripm' & variables != 'scape_m') %>% 
-  ggplot(aes(x = site, y = mean, color = q, shape = q))+
-  geom_point(size = 4)+
-  facet_grid(~ variables, labeller = labeller(q = q.labs))
-
-?select
+# test <- prelim_fxn_df %>% 
+#   pivot_longer(
+#     cols = edge_nmv_m:fruit.ctm,
+#     names_to = 'variables',
+#     values_to = 'mean'
+#   ) %>% 
+#   print(N = inf)
+# 
+# test %>% 
+#   filter(variables != 'suckm' & variables != 'thripm' & variables != 'scape_m') %>% 
+#   ggplot(aes(x = site, y = mean, color = q, shape = q))+
+#   geom_point(size = 4)+
+#   facet_grid(~ variables, labeller = labeller(q = q.labs))
 
 
 
@@ -156,8 +117,9 @@ tg_prelim_fx_df <- tg_mean_df %>%
                                Site == 3 ~ '6900',
                                Site == 4 ~ '7600',
                                Site == 5 ~ '8360')) %>% 
-  select(q, elevation, D1_p, D2_p, suck_mite_p, D5_p, D4_p, PH, PD, FlC, FrC) %>%
-  mutate_at(vars(2:11), as.numeric) %>% 
+  select(q, elevation, D1_p, D2_p, suck_mite_p, D5_p, D4_p, D6_p,
+         D6_ct, PH, PD, FlC, FrC) %>%
+  mutate_at(vars(2:13), as.numeric) %>% 
   mutate(elevation = as.factor(elevation),
          q = as.factor(q)) %>% 
   group_by(elevation,q) %>% 
@@ -167,6 +129,8 @@ tg_prelim_fx_df <- tg_mean_df %>%
     suckm = mean(suck_mite_p),
     scrape = mean(D5_p),
     hole = mean(D4_p),
+    mine = mean(D6_p),
+    mine_ct = mean(D6_ct),
     phm = mean(PH, na.rm = TRUE),
     pdm = mean(PD, na.rm = TRUE),
     flower.ctm = mean(FlC),
@@ -195,68 +159,6 @@ tg_raw_df <- tg_mean_df %>%
   mutate_at(vars(1:4), as.factor) %>% 
   mutate_at(vars(5:13), as.numeric)
 
-# d 6 
-
-# plotting mean of d6 
-
-tg_mean_df %>% 
-  mutate(elevation = case_when(Site == 1 ~ '5400',
-                               Site == 2 ~ '6100',
-                               Site == 3 ~ '6900',
-                               Site == 4 ~ '7600',
-                               Site == 5 ~ '8360')) %>% 
-  rename(q = Quadrat) %>% 
-  select(elevation, q, D6_p) %>% 
-  drop_na() %>% 
-  mutate(D6_p = as.numeric(D6_p),
-         elevation = as.factor(elevation),
-         q = as.factor(q)) %>% 
-  group_by(elevation, q) %>% 
-  summarise(
-    mine = mean(D6_p) 
-  ) %>% 
-  ggplot(aes(x = elevation, y = mine))+
-  facet_wrap(~q,
-             labeller = labeller(q = q.labs))+
-  geom_point(aes(size = 3, color = q))+
-  theme_bw()+
-  theme(
-    legend.position = 'none',
-    axis.text = element_text(size = 10)
-  )+
-  labs(title = 'Truman Gulch mine mean dmg')
-
-# jitter 
-
-tg_mean_df %>% 
-  mutate(elevation = case_when(Site == 1 ~ '5400',
-                               Site == 2 ~ '6100',
-                               Site == 3 ~ '6900',
-                               Site == 4 ~ '7600',
-                               Site == 5 ~ '8360')) %>% 
-  rename(q = Quadrat) %>% 
-  select(elevation, q, D6_p) %>% 
-  rename(mine = D6_p) %>% 
-  drop_na() %>% 
-  mutate(mine = as.numeric(mine),
-         elevation = as.factor(elevation),
-         q = as.factor(q)) %>%
-  ggplot(aes(x = elevation, y = mine))+
-  facet_wrap(~q,
-             labeller = labeller(q = q.labs))+
-  geom_point(aes(size = 3, color = q))+
-  stat_summary(fun = 'mean', color = 'red', size = 10, geom = 'point')+
-  theme_bw()+
-  theme(
-    legend.position = 'none',
-    axis.text = element_text(size = 10)
-  )+
-  labs(title = 'Truman Gulch mine mean dmg')
-
-
-
-
-
 
 # Retirement Wall ####
 
@@ -277,8 +179,8 @@ rw_prelim_fxn_df <- rw_mean_df %>%
                                Site == 3 ~ '6700',
                                Site == 4 ~ '6900',
                                Site == 5 ~ '7300')) %>% 
-  select(elevation, q, D1_p, D2_p, suck_mite_p, D5_p, D4_p, PH, PD, FlC, FrC) %>% 
-  mutate_at(vars(3:11), as.numeric) %>% 
+  select(elevation, q, D1_p, D2_p, suck_mite_p, D5_p, D4_p, D6_p, D6_ct, PH, PD, FlC, FrC) %>% 
+  mutate_at(vars(3:13), as.numeric) %>% 
   mutate_at(vars(1:2), as.factor) %>% 
   mutate(elevation = as.character(elevation)) %>% 
   group_by(elevation, q) %>% 
@@ -288,6 +190,8 @@ rw_prelim_fxn_df <- rw_mean_df %>%
     suckm = mean(suck_mite_p),
     scape = mean(D5_p), 
     hole = mean(D4_p),
+    mine = mean(D6_p),
+    mine_ct = mean(D6_ct),
     height_m = mean(PH), 
     diam_m = mean(PD),
     flower_ct = mean(FlC),
@@ -299,6 +203,7 @@ rw_prelim_fxn_df
 ##
 
 # raw values for jitter 
+
 colnames(rw_mean_df)
 
 rw_raw_df <- rw_mean_df %>% 
@@ -311,70 +216,8 @@ rw_raw_df <- rw_mean_df %>%
                                Site == 3 ~ '6700',
                                Site == 4 ~ '6900',
                                Site == 5 ~ '7300')) %>% 
-  select(Site, q, Date, D1_p, D2_p,D4_p,
+  select(Site, q, Date, D1_p, D2_p,D4_p,D6_p, D6_ct, 
          PH, PD, FlC, FrC, elevation) %>% 
   relocate(elevation) %>% 
   mutate_at(vars(1:4), as.factor) %>% 
-  mutate_at(vars(5:11), as.numeric)
-
-# d6 
-
-rw_d6_plot_df <- rw_mean_df %>% 
-  mutate(elevation = case_when(Site == 1 ~ '5600',
-                               Site == 2 ~ '6050',
-                               Site == 3 ~ '6700',
-                               Site == 4 ~ '6900',
-                               Site == 5 ~ '7300')) %>% 
-  rename(q = Quadrat) %>% 
-  select(elevation, q, D6_p) %>% 
-  drop_na() %>% 
-  mutate(D6_p = as.numeric(D6_p),
-         elevation = as.factor(elevation),
-         q = as.factor(q)) %>% 
-  group_by(elevation,q ) %>% 
-  summarise(
-    mine = mean(D6_p) 
-  ) %>% 
-  ggplot(aes(x = elevation, y = mine))+
-  facet_wrap(~q,
-             labeller = labeller(q = q.labs))+
-  geom_point(aes(size = 3, color = q))+
-  theme_bw()+
-  theme(
-    legend.position = 'none',
-    axis.text = element_text(size = 10)
-  )+
-  labs(title = 'Retriement wall D6')
-
-rw_d6_plot_df
-
-##
-
-# raw 6 with jitter 
-
-rw_mean_df %>% 
-  mutate(elevation = case_when(Site == 1 ~ '5600',
-                               Site == 2 ~ '6050',
-                               Site == 3 ~ '6700',
-                               Site == 4 ~ '6900',
-                               Site == 5 ~ '7300')) %>% 
-  rename(q = Quadrat) %>% 
-  select(elevation, q, D6_p) %>% 
-  drop_na() %>% 
-  mutate(D6_p = as.numeric(D6_p),
-         elevation = as.factor(elevation),
-         q = as.factor(q)) %>%
-  rename(mine = D6_p) %>% 
-  ggplot(aes(x = elevation, y = mine))+
-  facet_wrap(~q,
-             labeller = labeller(q = q.labs))+
-  geom_point(aes(size = 3, color = q))+
-  stat_summary(fun = 'mean', color = 'red', size = 10, geom = 'point')+
-  theme_bw()+
-  theme(
-    legend.position = 'none',
-    axis.text = element_text(size = 10)
-  )+
-  labs(title = 'Reitrement Wall mine mean dmg')
-
- 
+  mutate_at(vars(5:13), as.numeric)
