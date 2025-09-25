@@ -250,8 +250,8 @@ merged_df <- rbind(rw_merge, tg_merge, mc_merge) %>%
 unique(merged_df$elevation)
 
 final_merge <- merged_df %>% 
-  mutate(D6_p = replace_na(D6_p, 0)) %>% 
   mutate(sum = (D1_p + D2_p + D4_p + D6_p)) %>% 
+  filter(sum != 'NA') %>% 
   mutate(elev_new = case_when(elevation %in% c(5400,5600,6050,6100) ~ '5400-6100',
                                elevation%in% c(6700,6900) ~ '6700-6900',
                                elevation%in% c(7300,7600) ~ '7300-7600',
@@ -265,11 +265,41 @@ ggplot(final_merge, aes(x = elev_new, y = sum))+
   stat_summary(fun = 'mean', color = 'red', size = 5, geom = 'point')
 
 final_merge %>%
-  group_by(elev_new , q) %>% 
+  group_by(elev_new , q) %>%
+  filter(sum != 'NA') %>% 
   summarise(mean = mean(sum)) %>% 
   ggplot(aes(x = elev_new, y = mean, color = q))+
-  geom_line(aes(group = q), size = 2)
+  geom_line(aes(group = q), size = 2)+
+  labs(title = 'Mean damage')
 
+final_merge %>%
+  group_by(elev_new , q) %>% 
+  filter(PD != 'NA') %>% 
+  summarise(mean = mean(PD)) %>% 
+  ggplot(aes(x = elev_new, y = mean, color = q))+
+  geom_line(aes(group = q), size = 2)+
+  labs(title = 'Mean diameter')
 
+final_merge %>%
+  group_by(elev_new , q) %>% 
+  filter(PH != 'NA') %>% 
+  summarise(mean = mean(PH)) %>% 
+  ggplot(aes(x = elev_new, y = mean, color = q))+
+  geom_line(aes(group = q), size = 2)+
+  labs(title = 'Mean height')
 
+final_merge %>%
+  group_by(elev_new , q) %>% 
+  filter(FrC != 'NA') %>% 
+  summarise(mean = mean(FrC)) %>% 
+  ggplot(aes(x = elev_new, y = mean, color = q))+
+  geom_line(aes(group = q), size = 2)+
+  labs(title = 'Mean fruit')
 
+final_merge %>%
+  group_by(elev_new , q) %>% 
+  filter(FlC != 'NA') %>% 
+  summarise(mean = mean(FlC)) %>% 
+  ggplot(aes(x = elev_new, y = mean, color = q))+
+  geom_line(aes(group = q), size = 2)+
+  labs(title = 'Mean flower')
