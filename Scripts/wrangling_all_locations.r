@@ -260,4 +260,6 @@ final_merge <- merged_df %>%
   mutate(elev_new = as.factor(elev_new)) %>% 
   relocate(loc, elev_new)
 
-
+final_merge %>% 
+  mutate(el = as.numeric(levels(elevation))[elevation]) %>% 
+  print(n = Inf)

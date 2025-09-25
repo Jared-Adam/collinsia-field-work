@@ -41,6 +41,13 @@ plots_raw <- map(resp,
 raw_list <- map(plots_raw ,~cowplot::plot_grid(plotlist = .x))
 ggarrange(plotlist = raw_list)
 
+final_merge %>% 
+  mutate(elevation = as.numeric(levels(elevation))[elevation]) %>%
+ggplot(aes(x = elevation, y = sum, color = q))+
+  geom_smooth(method = 'gam',
+              formula = y ~ s(x, k =4))
+  
+
 
 
 
