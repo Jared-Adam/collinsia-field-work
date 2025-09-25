@@ -260,46 +260,4 @@ final_merge <- merged_df %>%
   mutate(elev_new = as.factor(elev_new)) %>% 
   relocate(loc, elev_new)
 
-ggplot(final_merge, aes(x = elev_new, y = sum))+
-  geom_point()+
-  stat_summary(fun = 'mean', color = 'red', size = 5, geom = 'point')
 
-final_merge %>%
-  group_by(elev_new , q) %>%
-  filter(sum != 'NA') %>% 
-  summarise(mean = mean(sum)) %>% 
-  ggplot(aes(x = elev_new, y = mean, color = q))+
-  geom_line(aes(group = q), size = 2)+
-  labs(title = 'Mean damage')
-
-final_merge %>%
-  group_by(elev_new , q) %>% 
-  filter(PD != 'NA') %>% 
-  summarise(mean = mean(PD)) %>% 
-  ggplot(aes(x = elev_new, y = mean, color = q))+
-  geom_line(aes(group = q), size = 2)+
-  labs(title = 'Mean diameter')
-
-final_merge %>%
-  group_by(elev_new , q) %>% 
-  filter(PH != 'NA') %>% 
-  summarise(mean = mean(PH)) %>% 
-  ggplot(aes(x = elev_new, y = mean, color = q))+
-  geom_line(aes(group = q), size = 2)+
-  labs(title = 'Mean height')
-
-final_merge %>%
-  group_by(elev_new , q) %>% 
-  filter(FrC != 'NA') %>% 
-  summarise(mean = mean(FrC)) %>% 
-  ggplot(aes(x = elev_new, y = mean, color = q))+
-  geom_line(aes(group = q), size = 2)+
-  labs(title = 'Mean fruit')
-
-final_merge %>%
-  group_by(elev_new , q) %>% 
-  filter(FlC != 'NA') %>% 
-  summarise(mean = mean(FlC)) %>% 
-  ggplot(aes(x = elev_new, y = mean, color = q))+
-  geom_line(aes(group = q), size = 2)+
-  labs(title = 'Mean flower')
