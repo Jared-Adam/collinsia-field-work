@@ -296,7 +296,7 @@ meta_clean <- meta %>%
   mutate(elevation = as.numeric(elevation)) %>% 
   rename(q = Quadrat,
          density = Count) %>% 
-  select(elevation, q, density) %>% 
+  select(Location, elevation, q, density) %>% 
   mutate(q = case_when(q == 1 ~ 'Sun',
                        q == 2 ~ 'Shade')) %>% 
   mutate(q = as.factor(q))
