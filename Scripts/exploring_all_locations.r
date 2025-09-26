@@ -232,35 +232,32 @@ ggsave('Collinsia_Fitness_plots.pdf',
 #3: Cp fecundity or size ~ Cp density
 #4: FlC ~ elev and FrC ~ elev, but (1) remove sun/shade and (2) use method='lm' for an overall linear estimate of the relationships
 
-
-
 # ALL with virdis option D
 
 
 #1: density ~ sun/shade (categorical) ####
 
-meta_clean %>% 
+CP.Will.DenxSS.plot <- meta_clean %>% 
 ggplot(aes(x = q, y = density, color = q))+
   stat_summary(fun = 'mean', size = 6, geom = 'point')+
     stat_summary(fun.data = mean_se, geom = "errorbar", width = 0.3, size = 1)+
   ylim(0, NA)+
   theme_bw() +
-  theme(axis.title.y = element_text(size=24),
+  theme(axis.title.y = element_text(size=12),
         axis.title.x = element_blank(),
         panel.grid = element_blank(),
-        plot.subtitle = element_text(size=20, hjust = 0.5),
-        axis.text = element_text(size = 24),
+        axis.text = element_text(size = 12),
         legend.position = 'none',
         axis.ticks.length = unit(.25, 'cm'))+
   scale_color_viridis_d(option = "D", end = 0.7)+
   labs(y = "Density")
 
-# ggsave('CP.Will.DenxSS.plot.pdf',
-#        CP.Will.DenxSS.plot,
-#        width = 3.5,
-#        height = 3.25,
-#        units='in',
-#        dpi=600)
+ggsave('CP.Will.DenxSS.plot.pdf',
+       CP.Will.DenxSS.plot,
+       width = 3.5,
+       height = 3.25,
+       units='in',
+       dpi=600)
 
 
 #2: damage ~ elev, can you just do flea beetle and edge no mv, and can you add the points with + geom_point() ####
@@ -290,9 +287,10 @@ long_damage %>%
   labs(x = "Elevation",
        y = "Damage")
 
+
 # WITH geom_point
 
-final_merge %>% 
+CP.Will.DamxElev_GeomPoint <- final_merge %>% 
   mutate(chew = D1_p + D2_p) %>%
   select(c(elevation, chew, D6_p)) %>% 
   pivot_longer(!elevation, names_to = 'damage', values_to = 'amount') %>% 
@@ -301,32 +299,32 @@ final_merge %>%
                             damage == 'D6_p' ~ 'Flea Beetle')) %>% 
   ggplot(aes(x = elevation, y = amount, color = damage, fill = damage))+
   geom_smooth(method = 'gam',
-              formula = y ~ s(x, k = 4),
-              size = 2)+
+              formula = y ~ s(x, k = 4))+
   geom_point()+
   theme_bw() +
-  theme(axis.title = element_text(size=24),
+  theme(axis.title = element_text(size=12),
         panel.grid = element_blank(),
-        plot.subtitle = element_text(size=20, hjust = 0.5),
-        axis.text = element_text(size = 24),
-        legend.text = element_text(size = 18),
+        axis.text = element_text(size = 12),
+        legend.text = element_text(size = 12),
         axis.ticks.length = unit(.25, 'cm'),
-        legend.title = element_text(size = 20))+
+        legend.title = element_text(size = 12))+
   guides(color=guide_legend(title="Damage Type"), fill = FALSE)+
   scale_color_viridis_d(option = "D", end = 0.85, direction = -1)+
   scale_fill_viridis_d(option = "D", end = 0.85, direction = -1)+
   labs(x = "Elevation",
        y = "Damage")
 
-# ggsave('CP.Will.DenxSS.plot.pdf',
-#        CP.Will.DenxSS.plot,
-#        width = 3.5,
-#        height = 3.25,
-#        units='in',
-#        dpi=600)
+ggsave('CP.Will.DamxElev_GeomPoint.pdf',
+       CP.Will.DamxElev_GeomPoint,
+       width = 6,
+       height = 3.25,
+       units='in',
+       dpi=600)
+
+
 
 # WITHOUT geom_point
-final_merge %>% 
+CP.Will.DamxElev <- final_merge %>% 
   mutate(chew = D1_p + D2_p) %>%
   select(c(elevation, chew, D6_p)) %>% 
   pivot_longer(!elevation, names_to = 'damage', values_to = 'amount') %>% 
@@ -338,36 +336,34 @@ final_merge %>%
               formula = y ~ s(x, k = 4),
               size = 2)+
   theme_bw() +
-  theme(axis.title = element_text(size=24),
+  theme(axis.title = element_text(size=12),
         panel.grid = element_blank(),
-        plot.subtitle = element_text(size=20, hjust = 0.5),
-        axis.text = element_text(size = 24),
-        legend.text = element_text(size = 18),
+        axis.text = element_text(size = 12),
+        legend.text = element_text(size = 12),
         axis.ticks.length = unit(.25, 'cm'),
-        legend.title = element_text(size = 20))+
+        legend.title = element_text(size = 12))+
   guides(color=guide_legend(title="Damage Type"), fill = FALSE)+
   scale_color_viridis_d(option = "D", end = 0.85, direction = -1)+
   scale_fill_viridis_d(option = "D", end = 0.85, direction = -1)+
   labs(x = "Elevation",
        y = "Damage")
 
-# ggsave('CP.Will.DenxSS.plot.pdf',
-#        CP.Will.DenxSS.plot,
-#        width = 3.5,
-#        height = 3.25,
-#        units='in',
-#        dpi=600)
+ggsave('CP.Will.DamxElev.pdf',
+       CP.Will.DamxElev,
+       width = 6,
+       height = 3.25,
+       units='in',
+       dpi=600)
 
 
 
 #3: Cp fecundity or size ~ Cp density ####
 
-?left_join
 left_meta <- meta_clean %>% 
   mutate(plant = 1:n()) %>% 
   mutate(plant = as.factor(plant))
 
-final_merge %>% 
+final_left <- final_merge %>% 
   mutate(elevation = as.numeric(levels(elevation))[elevation]) %>% 
   select(elevation, loc, PH, PD, FlC, FrC) %>% 
   rename(Location = loc) %>% 
@@ -375,23 +371,116 @@ final_merge %>%
   mutate(plant = 1:n()) %>% 
   mutate(plant = as.factor(plant)) %>% 
   relocate(plant) %>% 
-  left_join(left_meta, join_by(elevation, Location)) %>% 
-  print( n = 100)
+  left_join(left_meta, join_by(elevation, Location), relationship = 'many-to-many') 
 
 
+length_metric_left <- final_left %>% 
+  select(density, PH, PD) %>% 
+  pivot_longer(!density, names_to = 'fitness', values_to = 'unit')
 
-meta_clean %>% 
-  ggplot(aes(x = elevation, y = density, color = q))+
+
+CP.Will.SizeXDensity <- length_metric_left %>% 
+  mutate(Size = case_when(fitness == 'PH' ~ 'Height',
+                             fitness == 'PD' ~ 'Diameter')) %>% 
+  ggplot(aes(x = density, y = unit, color = Size, fill = Size))+
   geom_smooth(method = 'gam',
               formula = y ~ s(x, k =4))+
   theme_bw() +
-  theme(axis.title = element_text(size=24),
+  theme(axis.title = element_text(size=12),
         panel.grid = element_blank(),
-        plot.subtitle = element_text(size=20, hjust = 0.5),
-        axis.text = element_text(size = 24),
-        legend.text = element_text(size = 18),
+        axis.text = element_text(size = 12),
+        legend.text = element_text(size = 12),
+        axis.ticks.length = unit(.25, 'cm'),
+        legend.title = element_text(size = 12))+
+  scale_color_viridis_d(option = "D", end = 0.85, direction = -1)+
+  scale_fill_viridis_d(option = "D", end = 0.85, direction = -1)+
+  labs(x = "Plant Density / Quadrat",
+       y = "mm")+
+  ylim(0,NA)
+
+ggsave('CP.Will.SizeXDensity.pdf',
+       CP.Will.SizeXDensity,
+       width = 3.5,
+       height = 3.25,
+       units='in',
+       dpi=600)
+
+
+count_metric_left <- final_left %>% 
+  select(density, FlC, FrC) %>% 
+  pivot_longer(!density, names_to = 'fitness', values_to = 'count')
+
+CP.Will.FecundXDensity <- count_metric_left %>% 
+  mutate(Fecundity = case_when(fitness == 'FlC' ~ 'Flower Count',
+                             fitness == 'FrC' ~ 'Fruit Count')) %>% 
+  ggplot(aes(x = density, y = count, color = Fecundity, fill = Fecundity))+
+  geom_smooth(method = 'gam',
+              formula = y ~ s(x, k =4))+
+  theme_bw() +
+  theme(axis.title = element_text(size=12),
+        panel.grid = element_blank(),
+        axis.text = element_text(size = 12),
+        legend.text = element_text(size = 12),
+        axis.ticks.length = unit(.25, 'cm'),
+        legend.title = element_text(size = 12))+
+  scale_color_viridis_d(option = "D", end = 0.85, direction = -1)+
+  scale_fill_viridis_d(option = "D", end = 0.85, direction = -1)+
+  labs(x = "Plant Density / Quadrat",
+       y = "Count")+
+  ylim(0,NA)
+
+ggsave('CP.Will.FecundXDensity.pdf',
+       CP.Will.FecundXDensity,
+       width = 3.5,
+       height = 3.25,
+       units='in',
+       dpi=600)
+
+
+#4: FlC ~ elev and FrC ~ elev, but (1) remove sun/shade and (2) use method='lm' for an overall linear estimate of the relationships ####
+
+fitness_final
+
+CP.Will.FruitxElev <- ggplot(fitness_final, aes(x = elevation, y = FrC))+
+  geom_smooth(method = 'lm', size = 2)+
+  theme_bw() +
+  theme(axis.title = element_text(size=12),
+        panel.grid = element_blank(),
+        axis.text = element_text(size = 12),
+        legend.text = element_text(size = 12),
         axis.ticks.length = unit(.25, 'cm'),
         legend.title = element_blank())+
-  scale_color_brewer(palette = "Dark2")+
   labs(x = "Elevation",
-       y = "Density")
+       y = "Fruit Count")+
+  ylim(0,NA)
+
+ggsave('CP.Will.FruitxElev.pdf',
+       CP.Will.FruitxElev,
+       width = 6,
+       height = 3.25,
+       units='in',
+       dpi=600)
+
+
+CP.Will.FlowerxElev <- ggplot(fitness_final, aes(x = elevation, y = FlC))+
+  geom_smooth(method = 'lm', size = 2)+
+  theme_bw() +
+  theme(axis.title = element_text(size=12),
+        panel.grid = element_blank(),
+        axis.text = element_text(size = 12),
+        legend.text = element_text(size = 12),
+        axis.ticks.length = unit(.25, 'cm'),
+        legend.title = element_blank())+
+  labs(x = "Elevation",
+       y = "Flower Count")+
+  ylim(0,NA)
+
+ggsave('CP.Will.FlowerxElev.pdf',
+       CP.Will.FlowerxElev,
+       width = 6,
+       height = 3.25,
+       units='in',
+       dpi=600)
+
+
+
