@@ -3,9 +3,11 @@
 # packages ####
 library(tidyverse)
 library(ggpubr)
+library(RColorBrewer)
 
 # data
 final_merge
+long_damage
 
 # by raw values ####
 
@@ -40,13 +42,6 @@ plots_raw <- map(resp,
             ~map(exp, dot_plots, y = .x))
 raw_list <- map(plots_raw ,~cowplot::plot_grid(plotlist = .x))
 ggarrange(plotlist = raw_list)
-
-final_merge %>% 
-  mutate(elevation = as.numeric(levels(elevation))[elevation]) %>%
-ggplot(aes(x = elevation, y = sum, color = q))+
-  geom_smooth(method = 'gam',
-              formula = y ~ s(x, k =4))
-  
 
 
 
@@ -123,3 +118,30 @@ final_merge %>%
   ggplot(aes(x = elev_new, y = mean, color = q))+
   geom_line(aes(group = q), size = 2)+
   labs(title = 'Mean flower')
+
+# GAMs ####
+
+
+final_merge %>% 
+  mutate(elevation = as.numeric(levels(elevation))[elevation]) %>%
+  mutate(q = case_when(q == '1' ~ 'Sun',
+                       q == '2' ~ 'Shade')) %>% 
+ggplot(aes(x = elevation, y = sum, color = q))+
+  geom_smooth(method = 'gam',
+              formula = y ~ s(x, k =4))+
+  theme_bw() +
+  theme(axis.title = element_text(size=24),
+        panel.grid = element_blank(),
+        plot.subtitle = element_text(size=20, hjust = 0.5),
+        axis.text = element_text(size = 24),
+        legend.text = element_text(size = 18),
+        axis.ticks.length = unit(.25, 'cm'),
+        legend.title = element_blank())+
+  scale_color_brewer(palette = "Dark2")+
+  labs(x = "Elevation",
+       y = "Damage")
+
+
+
+
+

@@ -263,3 +263,11 @@ final_merge <- merged_df %>%
 final_merge %>% 
   mutate(el = as.numeric(levels(elevation))[elevation]) %>% 
   print(n = Inf)
+
+# pivot longer so I can make a plot with each damage type as a line ####
+
+long_damage <- final_merge %>% 
+  select(c(elevation, D1_p, D2_p, D4_p, D6_p)) %>% 
+  pivot_longer(!elevation, names_to = 'damage', values_to = 'amount') %>% 
+  mutate(elevation = as.numeric(levels(elevation))[elevation])
+
