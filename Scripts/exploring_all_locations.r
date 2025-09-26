@@ -112,6 +112,14 @@ ggplot(aes(x = elevation, y = sum, color = q))+
   labs(x = "Elevation",
        y = "Damage")
 
+ggsave('Collinsia_densityXelev.pdf',
+       densityXelevation_plot,
+       width = 6,
+       height = 6,
+       units='in',
+       dpi=600)
+
+
 
 long_damage %>% 
   mutate(damagae = as.factor(damage)) %>% 
@@ -134,6 +142,15 @@ long_damage %>%
   scale_color_brewer(palette = "Dark2")+
   labs(x = "Elevation",
        y = "Damage")
+
+ggsave('Collinsia_densityXelev.pdf',
+       densityXelevation_plot,
+       width = 6,
+       height = 6,
+       units='in',
+       dpi=600)
+
+
 
 # GAMs of fitness x elevation ####
 
