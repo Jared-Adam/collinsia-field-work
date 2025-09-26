@@ -7,6 +7,7 @@ library(tidyverse)
 mica_creek_df <- X2025_7_15_MC_field_data_online_entry
 truman_df <- X2025_7_22_TG_field_data_online_entry
 rw_df <- X2025_7_22_RW_field_data_online_entry
+meta <- X2025_9_26_FieldSite_Meta_JAdam
 
 # Mica Creek ####
 
@@ -271,3 +272,39 @@ long_damage <- final_merge %>%
   pivot_longer(!elevation, names_to = 'damage', values_to = 'amount') %>% 
   mutate(elevation = as.numeric(levels(elevation))[elevation])
 
+
+# meta data of all sites ####
+
+meta_clean <- meta %>% 
+  mutate(elevation = case_when(Location == 'MC' & Site == 1 ~ '6100',
+                               Location == 'MC' & Site == 2 ~ '6700',
+                               Location == 'MC' & Site == 3 ~ '7300',
+                               Location == 'MC' & Site == 4 ~ '8200',
+                               Location == 'MC' & Site == 5 ~ '8800',
+                               Location == 'MC' & Site == 6 ~ '9100',
+                               Location == 'TG' & Site == 1 ~ '5400',
+                               Location == 'TG' & Site == 2 ~ '6100',
+                               Location == 'TG' & Site == 3 ~ '6900',
+                               Location == 'TG' & Site == 4 ~ '7600',
+                               Location == 'TG' & Site == 5 ~ '8360',
+                               Location == 'RW' & Site == 1 ~ '5600',
+                               Location == 'RW' & Site == 2 ~ '6050',
+                               Location == 'RW' & Site == 3 ~ '6700',
+                               Location == 'RW' & Site == 4 ~ '6900',
+                               Location == 'RW' & Site == 5 ~ '7300'
+                               )) %>% 
+  mutate(elevation = as.numeric(elevation)) %>% 
+  rename(q = Quadrat,
+         density = Count) %>% 
+  select(elevation, q, density) %>% 
+  mutate(q = case_when(q == 1 ~ 'Sun',
+                       q == 2 ~ 'Shade')) %>% 
+  mutate(q = as.factor(q))
+
+# fitness data set for all sites ####
+
+fitness_final <- final_merge %>% 
+  select(elevation, q, PH, PD, FlC, FrC) %>% 
+  mutate(elevation = as.numeric(levels(elevation))[elevation]) %>%
+  mutate(q = as.factor(case_when(q == '1' ~ 'Sun',
+                                 q == '2' ~ 'Shade')))

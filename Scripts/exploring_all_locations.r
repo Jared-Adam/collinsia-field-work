@@ -5,9 +5,11 @@ library(tidyverse)
 library(ggpubr)
 library(RColorBrewer)
 
-# data
+# data ####
 final_merge
 long_damage
+meta
+fitness_final
 
 # by raw values ####
 
@@ -47,38 +49,6 @@ ggarrange(plotlist = raw_list)
 
 
 # by mean values ####
-
-mean_exp <- names(final_merge[2])
-mean_exp <- set_names(mean_exp)
-
-mean_resp <- names(final_merge[10:14])
-mean_resp <- set_names(mean_resp)
-
-final_merge_df <- as.data.frame(final_merge)
-
-# broken function 9/25/2025
-mean_plots <- function(x,y){
-  final_merge_df %>% 
-    group_by(elev_new , q) %>%
-    filter(sum != 'NA') %>% 
-  ggplot(final_merge_df, aes(x = .data[[x]], y = .data[[y]]))+
-    geom_point(aes(size = 3, color = q))+
-    stat_summary(fun = 'mean', geom = 'line')+
-    ylim(0,NA)+
-    theme_bw()+
-    theme(
-      legend.position = 'none',
-      axis.text = element_text(size = 8)
-    )
-}
-
-plots_mean <- map(mean_resp,
-                 ~map(mean_exp, dot_plots, y = .x))
-raw_list <- map(plots_mean ,~cowplot::plot_grid(plotlist = .x))
-ggarrange(plotlist = plots_mean)
-
-
-
 final_merge %>%
   group_by(elev_new , q) %>%
   filter(sum != 'NA') %>% 
@@ -119,8 +89,9 @@ final_merge %>%
   geom_line(aes(group = q), size = 2)+
   labs(title = 'Mean flower')
 
-# GAMs ####
+# GAMs of sum damage and unique damage type ####
 
+#  y = predicted mean from a models
 
 final_merge %>% 
   mutate(elevation = as.numeric(levels(elevation))[elevation]) %>%
@@ -142,6 +113,98 @@ ggplot(aes(x = elevation, y = sum, color = q))+
        y = "Damage")
 
 
+long_damage %>% 
+  mutate(damagae = as.factor(damage)) %>% 
+  mutate(damage = case_when( damage == 'D1_p' ~ 'Edge No Midvein',
+                             damage == 'D2_p' ~ 'Edge with Midvein',
+                             damage == 'D4_p' ~ 'Hole', 
+                             damage == 'D6_p' ~ 'Mine')) %>% 
+  ggplot(aes(x = elevation, y = amount, color = damage))+
+  geom_smooth(method = 'gam',
+              formula = y ~ s(x, k =4))+
+  theme_bw() +
+  theme(axis.title = element_text(size=24),
+        panel.grid = element_blank(),
+        plot.subtitle = element_text(size=20, hjust = 0.5),
+        axis.text = element_text(size = 24),
+        legend.text = element_text(size = 18),
+        axis.ticks.length = unit(.25, 'cm'),
+        legend.title = element_text(size = 20))+
+  guides(color=guide_legend(title="Damage Type"))+
+  scale_color_brewer(palette = "Dark2")+
+  labs(x = "Elevation",
+       y = "Damage")
 
+# GAMs of fitness x elevation ####
+
+# Density x elevation 
+
+densityXelevation_plot <- meta_clean %>% 
+ggplot(aes(x = elevation, y = density, color = q))+
+  geom_smooth(method = 'gam',
+              formula = y ~ s(x, k =4))+
+  theme_bw() +
+  theme(axis.title = element_text(size=24),
+        panel.grid = element_blank(),
+        plot.subtitle = element_text(size=20, hjust = 0.5),
+        axis.text = element_text(size = 24),
+        legend.text = element_text(size = 18),
+        axis.ticks.length = unit(.25, 'cm'),
+        legend.title = element_blank())+
+  scale_color_brewer(palette = "Dark2")+
+  labs(x = "Elevation",
+       y = "Density")
+
+# 6x6 seems to be the best size for the elevation axis
+ggsave('Collinsia_densityXelev.pdf',
+       densityXelevation_plot,
+       width = 6,
+       height = 6,
+       units='in',
+       dpi=600)
+
+
+
+# Size x elevation 
+
+fitness_final
+
+f_exp <- names(fitness_final[1])
+f_exp <- set_names(f_exp)
+
+f_resp <- names(fitness_final[3:6])
+f_resp <- set_names(f_resp)
+
+q.labs <- c("Sun", "Shade")
+names(q.labs) <- c('1', '2')
+
+f_plots <- function(x,y){
+  ggplot(fitness_final, aes(x = .data[[x]], y = .data[[y]], color = q))+
+    geom_smooth(method = 'gam',
+                formula = y ~ s(x, k =4))+
+    theme_bw() +
+    theme(axis.title = element_text(size=24),
+          panel.grid = element_blank(),
+          plot.subtitle = element_text(size=20, hjust = 0.5),
+          axis.text = element_text(size = 24),
+          legend.text = element_text(size = 18),
+          axis.ticks.length = unit(.25, 'cm'),
+          legend.title = element_blank())+
+    scale_color_brewer(palette = "Dark2")+
+    labs(x = "Elevation")
+}
+
+f_plots_obj <- map(f_resp,
+                 ~map(f_exp, f_plots, y = .x))
+f_list <- map(f_plots_obj ,~cowplot::plot_grid(plotlist = .x))
+fitness_plot_save <- ggarrange(plotlist = f_list)
+
+# for multi-panel, save bigger 
+ggsave('Collinsia_Fitness_plots.pdf',
+       fitness_plot_save,
+       width = 14,
+       height = 14,
+       units='in',
+       dpi=600)
 
 
