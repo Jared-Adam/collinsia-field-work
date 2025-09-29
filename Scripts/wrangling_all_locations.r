@@ -270,7 +270,8 @@ final_merge %>%
 long_damage <- final_merge %>% 
   select(c(elevation, D1_p, D2_p, D4_p, D6_p)) %>% 
   pivot_longer(!elevation, names_to = 'damage', values_to = 'amount') %>% 
-  mutate(elevation = as.numeric(levels(elevation))[elevation])
+  mutate(elevation = as.numeric(levels(elevation))[elevation])%>% 
+  mutate(meters = (elevation * 0.3048))
 
 
 # meta data of all sites ####
@@ -307,4 +308,5 @@ fitness_final <- final_merge %>%
   select(elevation, q, PH, PD, FlC, FrC) %>% 
   mutate(elevation = as.numeric(levels(elevation))[elevation]) %>%
   mutate(q = as.factor(case_when(q == '1' ~ 'Sun',
-                                 q == '2' ~ 'Shade')))
+                                 q == '2' ~ 'Shade'))) %>% 
+  mutate(meters = (elevation * 0.3048))
