@@ -268,7 +268,7 @@ long_damage %>%
   mutate(damage = case_when(damage == 'D1_p' ~ 'Edge No Midvein',
                              damage == 'D2_p' ~ 'Edge with Midvein',
                              damage == 'D6_p' ~ 'Mine')) %>% 
-  ggplot(aes(x = elevation, y = amount, color = damage, fill = damage))+
+  ggplot(aes(x = meters, y = amount, color = damage, fill = damage))+
   geom_smooth(method = 'gam',
               formula = y ~ s(x, k = 4),
               size = 2)+
@@ -297,7 +297,8 @@ CP.Will.DamxElev_GeomPoint <- final_merge %>%
   mutate(elevation = as.numeric(levels(elevation))[elevation])%>% 
   mutate(damage = case_when(damage == 'chew' ~ 'Grasshopper',
                             damage == 'D6_p' ~ 'Flea Beetle')) %>% 
-  ggplot(aes(x = elevation, y = amount, color = damage, fill = damage))+
+  mutate(meters = (elevation * 0.3048)) %>% 
+  ggplot(aes(x = meters, y = amount, color = damage, fill = damage))+
   geom_smooth(method = 'gam',
               formula = y ~ s(x, k = 4))+
   geom_point()+
@@ -311,7 +312,7 @@ CP.Will.DamxElev_GeomPoint <- final_merge %>%
   guides(color=guide_legend(title="Damage Type"), fill = FALSE)+
   scale_color_viridis_d(option = "D", end = 0.85, direction = -1)+
   scale_fill_viridis_d(option = "D", end = 0.85, direction = -1)+
-  labs(x = "Elevation",
+  labs(x = "Elevation (m)",
        y = "Damage")
 
 ggsave('CP.Will.DamxElev_GeomPoint.pdf',
@@ -331,7 +332,8 @@ CP.Will.DamxElev <- final_merge %>%
   mutate(elevation = as.numeric(levels(elevation))[elevation])%>% 
   mutate(damage = case_when(damage == 'chew' ~ 'Grasshopper',
                             damage == 'D6_p' ~ 'Flea Beetle')) %>% 
-  ggplot(aes(x = elevation, y = amount, color = damage, fill = damage))+
+  mutate(meters = (elevation * 0.3048)) %>% 
+  ggplot(aes(x = meters, y = amount, color = damage, fill = damage))+
   geom_smooth(method = 'gam',
               formula = y ~ s(x, k = 4),
               size = 2)+
@@ -345,7 +347,7 @@ CP.Will.DamxElev <- final_merge %>%
   guides(color=guide_legend(title="Damage Type"), fill = FALSE)+
   scale_color_viridis_d(option = "D", end = 0.85, direction = -1)+
   scale_fill_viridis_d(option = "D", end = 0.85, direction = -1)+
-  labs(x = "Elevation",
+  labs(x = "Elevation (m)",
        y = "Damage")
 
 ggsave('CP.Will.DamxElev.pdf',
@@ -441,7 +443,7 @@ ggsave('CP.Will.FecundXDensity.pdf',
 
 fitness_final
 
-CP.Will.FruitxElev <- ggplot(fitness_final, aes(x = elevation, y = FrC))+
+CP.Will.FruitxElev <- ggplot(fitness_final, aes(x = meters, y = FrC))+
   geom_smooth(method = 'lm', size = 2)+
   theme_bw() +
   theme(axis.title = element_text(size=12),
@@ -450,7 +452,7 @@ CP.Will.FruitxElev <- ggplot(fitness_final, aes(x = elevation, y = FrC))+
         legend.text = element_text(size = 12),
         axis.ticks.length = unit(.25, 'cm'),
         legend.title = element_blank())+
-  labs(x = "Elevation",
+  labs(x = "Elevation (m)",
        y = "Fruit Count")+
   ylim(0,NA)
 
@@ -462,7 +464,7 @@ ggsave('CP.Will.FruitxElev.pdf',
        dpi=600)
 
 
-CP.Will.FlowerxElev <- ggplot(fitness_final, aes(x = elevation, y = FlC))+
+CP.Will.FlowerxElev <- ggplot(fitness_final, aes(x = meters, y = FlC))+
   geom_smooth(method = 'lm', size = 2)+
   theme_bw() +
   theme(axis.title = element_text(size=12),
@@ -471,7 +473,7 @@ CP.Will.FlowerxElev <- ggplot(fitness_final, aes(x = elevation, y = FlC))+
         legend.text = element_text(size = 12),
         axis.ticks.length = unit(.25, 'cm'),
         legend.title = element_blank())+
-  labs(x = "Elevation",
+  labs(x = "Elevation (m)",
        y = "Flower Count")+
   ylim(0,NA)
 
