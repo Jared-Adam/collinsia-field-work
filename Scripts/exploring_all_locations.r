@@ -10,6 +10,7 @@ final_merge
 long_damage
 meta
 fitness_final
+long_fitness
 
 # by raw values ####
 
@@ -224,6 +225,56 @@ ggsave('Collinsia_Fitness_plots.pdf',
        dpi=600)
 
 
+# all metrics in one plot 
+
+long_fitness %>% 
+  filter(fitness == c('PH', 'PD')) %>% 
+  mutate(fitness = case_when(fitness == 'PH' ~ 'Plant Height',
+                             fitness == 'PD' ~ 'Plant Diameter')) %>% 
+  mutate(fitness = as.factor(fitness)) %>% 
+  ggplot(aes(x = meters, y = value, color = fitness, fill = fitness))+
+  geom_smooth(method = 'gam',
+              formula = y ~ s(x, k = 4),
+              size = 2)+
+  theme_bw() +
+  theme(axis.title = element_text(size=24),
+        panel.grid = element_blank(),
+        plot.subtitle = element_text(size=20, hjust = 0.5),
+        axis.text = element_text(size = 24),
+        legend.text = element_text(size = 18),
+        axis.ticks.length = unit(.25, 'cm'),
+        legend.title = element_text(size = 20))+
+  guides(color=guide_legend(title="Fitness Metric"), fill = FALSE)+
+  scale_fill_brewer(palette = "Dark2")+
+  scale_color_brewer(palette = "Dark2")+
+  labs(x = "Elevation (m)",
+       y = "Size (mm)")+
+  ylim(0,NA)
+
+
+
+long_fitness %>% 
+  filter(fitness == c('FlC', 'FrC')) %>% 
+  mutate(fitness = case_when(fitness == 'FlC' ~ 'Flower Count', 
+                             fitness == 'FrC' ~ 'Fruit Count')) %>% 
+  mutate(fitness = as.factor(fitness)) %>% 
+  ggplot(aes(x = meters, y = value, color = fitness, fill = fitness))+
+  geom_smooth(method = 'gam',
+              formula = y ~ s(x, k = 4),
+              size = 2)+
+  theme_bw() +
+  theme(axis.title = element_text(size=24),
+        panel.grid = element_blank(),
+        plot.subtitle = element_text(size=20, hjust = 0.5),
+        axis.text = element_text(size = 24),
+        legend.text = element_text(size = 18),
+        axis.ticks.length = unit(.25, 'cm'),
+        legend.title = element_text(size = 20))+
+  guides(color=guide_legend(title="Fecundity"), fill = FALSE)+
+  scale_fill_brewer(palette = "Dark2")+
+  scale_color_brewer(palette = "Dark2")+
+  labs(x = "Elevation (m)",
+       y = "Count")
 
 # Plots for Will ####
 
@@ -262,6 +313,8 @@ ggsave('CP.Will.DenxSS.plot.pdf',
 
 #2: damage ~ elev, can you just do flea beetle and edge no mv, and can you add the points with + geom_point() ####
 
+# For me 
+
 long_damage %>% 
   mutate(damage = as.factor(damage)) %>% 
   filter(damage == c('D1_p', 'D2_p', 'D6_p')) %>% 
@@ -272,7 +325,6 @@ long_damage %>%
   geom_smooth(method = 'gam',
               formula = y ~ s(x, k = 4),
               size = 2)+
-  geom_point()+
   theme_bw() +
   theme(axis.title = element_text(size=24),
         panel.grid = element_blank(),
@@ -282,10 +334,39 @@ long_damage %>%
         axis.ticks.length = unit(.25, 'cm'),
         legend.title = element_text(size = 20))+
   guides(color=guide_legend(title="Damage Type"), fill = FALSE)+
-  scale_color_viridis_d(option = "D", end = 0.85, direction = -1)+
-  scale_fill_viridis_d(option = "D", end = 0.85, direction = -1)+
-  labs(x = "Elevation",
+  scale_fill_brewer(palette = "Dark2")+
+  scale_color_brewer(palette = "Dark2")+
+  labs(x = "Elevation (m)",
        y = "Damage")
+
+
+final_merge %>% 
+  mutate(chew = D1_p + D2_p) %>%
+  select(c(elevation, chew, D6_p)) %>% 
+  pivot_longer(!elevation, names_to = 'damage', values_to = 'amount') %>% 
+  mutate(elevation = as.numeric(levels(elevation))[elevation])%>% 
+  mutate(damage = case_when(damage == 'chew' ~ 'Grasshopper',
+                            damage == 'D6_p' ~ 'Flea Beetle')) %>% 
+  mutate(meters = (elevation * 0.3048)) %>% 
+  ggplot(aes(x = meters, y = amount, color = damage, fill = damage))+
+  geom_smooth(method = 'gam',
+              formula = y ~ s(x, k = 4),
+              size = 2)+
+  theme_bw() +
+  theme(axis.title = element_text(size=24),
+        panel.grid = element_blank(),
+        plot.subtitle = element_text(size=20, hjust = 0.5),
+        axis.text = element_text(size = 24),
+        legend.text = element_text(size = 18),
+        axis.ticks.length = unit(.25, 'cm'),
+        legend.title = element_text(size = 20))+
+  guides(color=guide_legend(title="Damage Type"), fill = FALSE)+
+  scale_fill_brewer(palette = "Dark2")+
+  scale_color_brewer(palette = "Dark2")+
+  labs(x = "Elevation (m)",
+       y = "Damage")
+
+
 
 
 # WITH geom_point
