@@ -233,8 +233,7 @@ long_fitness %>%
                              fitness == 'PD' ~ 'Plant Diameter')) %>% 
   mutate(fitness = as.factor(fitness)) %>% 
   ggplot(aes(x = meters, y = value, color = fitness, fill = fitness))+
-  geom_smooth(method = 'gam',
-              formula = y ~ s(x, k = 4),
+  geom_smooth(method = 'lm',
               size = 2)+
   theme_bw() +
   theme(axis.title = element_text(size=24),
@@ -259,8 +258,7 @@ long_fitness %>%
                              fitness == 'FrC' ~ 'Fruit Count')) %>% 
   mutate(fitness = as.factor(fitness)) %>% 
   ggplot(aes(x = meters, y = value, color = fitness, fill = fitness))+
-  geom_smooth(method = 'gam',
-              formula = y ~ s(x, k = 4),
+  geom_smooth(method = 'lm',
               size = 2)+
   theme_bw() +
   theme(axis.title = element_text(size=24),
@@ -274,7 +272,8 @@ long_fitness %>%
   scale_fill_brewer(palette = "Dark2")+
   scale_color_brewer(palette = "Dark2")+
   labs(x = "Elevation (m)",
-       y = "Count")
+       y = "Count")+
+  ylim(0,NA)
 
 # Plots for Will ####
 
@@ -352,6 +351,7 @@ final_merge %>%
   geom_smooth(method = 'gam',
               formula = y ~ s(x, k = 4),
               size = 2)+
+  geom_point(size = 4, alpha = 0.6)+
   theme_bw() +
   theme(axis.title = element_text(size=24),
         panel.grid = element_blank(),
@@ -382,7 +382,7 @@ CP.Will.DamxElev_GeomPoint <- final_merge %>%
   ggplot(aes(x = meters, y = amount, color = damage, fill = damage))+
   geom_smooth(method = 'gam',
               formula = y ~ s(x, k = 4))+
-  geom_point()+
+  geom_point(size = 4, alpha = 0.6)+
   theme_bw() +
   theme(axis.title = element_text(size=12),
         panel.grid = element_blank(),
