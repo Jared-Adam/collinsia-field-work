@@ -374,7 +374,7 @@ final_merge %>%
 
 # WITH geom_point
 
-# CP.Will.DamxElev_GeomPoint <- 
+CP.Will.DamxElev_GeomPoint <- 
   final_merge %>% 
   mutate(chew = D1_p + D2_p) %>%
   select(c(elevation, chew, D6_p)) %>% 
@@ -386,7 +386,7 @@ final_merge %>%
   ggplot(aes(x = meters, y = amount, color = damage, fill = damage))+
   geom_smooth(method = 'gam',
               formula = y ~ s(x, k = 4), show.legend = FALSE)+
-  geom_point(size = 4, alpha = 0.6)+
+  geom_point(size = 2, alpha = 0.6)+
   theme_bw() +  
   scale_color_viridis_d(option = "D", end = 0.85, direction = -1, guide = 'none')+
   scale_fill_viridis_d(option = "D", end = 0.85, direction = -1, guide = 'none')+
