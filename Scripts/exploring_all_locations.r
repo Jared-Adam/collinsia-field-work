@@ -240,10 +240,11 @@ long_fitness %>%
         panel.grid = element_blank(),
         plot.subtitle = element_text(size=20, hjust = 0.5),
         axis.text = element_text(size = 24),
-        legend.text = element_text(size = 18),
+        legend.text = element_text(size = 22),
         axis.ticks.length = unit(.25, 'cm'),
-        legend.title = element_text(size = 20))+
-  guides(color=guide_legend(title="Fitness Metric"), fill = FALSE)+
+        legend.title = element_text(size = 24),
+        legend.position = 'bottom')+
+  guides(color=guide_legend(title="Fitness Metric", override.aes = list(size = 8)), fill = FALSE)+
   scale_fill_brewer(palette = "Dark2")+
   scale_color_brewer(palette = "Dark2")+
   labs(x = "Elevation (m)",
@@ -265,10 +266,11 @@ long_fitness %>%
         panel.grid = element_blank(),
         plot.subtitle = element_text(size=20, hjust = 0.5),
         axis.text = element_text(size = 24),
-        legend.text = element_text(size = 18),
+        legend.text = element_text(size = 22),
         axis.ticks.length = unit(.25, 'cm'),
-        legend.title = element_text(size = 20))+
-  guides(color=guide_legend(title="Fecundity"), fill = FALSE)+
+        legend.title = element_text(size = 24),
+        legend.position = 'bottom')+
+  guides(color=guide_legend(title="Fecundity", override.aes = list(size = 8)), fill = FALSE)+
   scale_fill_brewer(palette = "Dark2")+
   scale_color_brewer(palette = "Dark2")+
   labs(x = "Elevation (m)",
@@ -351,16 +353,17 @@ final_merge %>%
   geom_smooth(method = 'gam',
               formula = y ~ s(x, k = 4),
               size = 2)+
-  geom_point(size = 4, alpha = 0.6)+
+  # geom_point(size = 4, alpha = 0.6)+
   theme_bw() +
   theme(axis.title = element_text(size=24),
         panel.grid = element_blank(),
         plot.subtitle = element_text(size=20, hjust = 0.5),
         axis.text = element_text(size = 24),
-        legend.text = element_text(size = 18),
+        legend.text = element_text(size = 22),
         axis.ticks.length = unit(.25, 'cm'),
-        legend.title = element_text(size = 20))+
-  guides(color=guide_legend(title="Damage Type"), fill = FALSE)+
+        legend.title = element_text(size = 24),
+        legend.position = 'bottom')+
+  guides(color=guide_legend(title="Damage Type", override.aes = list(size = 8)), fill = FALSE)+
   scale_fill_brewer(palette = "Dark2")+
   scale_color_brewer(palette = "Dark2")+
   labs(x = "Elevation (m)",
@@ -371,7 +374,8 @@ final_merge %>%
 
 # WITH geom_point
 
-CP.Will.DamxElev_GeomPoint <- final_merge %>% 
+# CP.Will.DamxElev_GeomPoint <- 
+  final_merge %>% 
   mutate(chew = D1_p + D2_p) %>%
   select(c(elevation, chew, D6_p)) %>% 
   pivot_longer(!elevation, names_to = 'damage', values_to = 'amount') %>% 
@@ -381,18 +385,18 @@ CP.Will.DamxElev_GeomPoint <- final_merge %>%
   mutate(meters = (elevation * 0.3048)) %>% 
   ggplot(aes(x = meters, y = amount, color = damage, fill = damage))+
   geom_smooth(method = 'gam',
-              formula = y ~ s(x, k = 4))+
+              formula = y ~ s(x, k = 4), show.legend = FALSE)+
   geom_point(size = 4, alpha = 0.6)+
-  theme_bw() +
+  theme_bw() +  
+  scale_color_viridis_d(option = "D", end = 0.85, direction = -1, guide = 'none')+
+  scale_fill_viridis_d(option = "D", end = 0.85, direction = -1, guide = 'none')+
   theme(axis.title = element_text(size=12),
         panel.grid = element_blank(),
         axis.text = element_text(size = 12),
         legend.text = element_text(size = 12),
         axis.ticks.length = unit(.25, 'cm'),
-        legend.title = element_text(size = 12))+
-  guides(color=guide_legend(title="Damage Type"), fill = FALSE)+
-  scale_color_viridis_d(option = "D", end = 0.85, direction = -1)+
-  scale_fill_viridis_d(option = "D", end = 0.85, direction = -1)+
+        legend.title = element_text(size = 12)) +
+  guides(color=guide_legend(title="Damage Type"))+
   labs(x = "Elevation (m)",
        y = "Damage")
 
