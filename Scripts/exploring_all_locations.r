@@ -374,7 +374,8 @@ final_merge %>%
 
 # WITH geom_point
 
-CP.Will.DamxElev_GeomPoint <- final_merge %>% 
+# CP.Will.DamxElev_GeomPoint <- 
+  final_merge %>% 
   mutate(chew = D1_p + D2_p) %>%
   select(c(elevation, chew, D6_p)) %>% 
   pivot_longer(!elevation, names_to = 'damage', values_to = 'amount') %>% 
@@ -384,18 +385,18 @@ CP.Will.DamxElev_GeomPoint <- final_merge %>%
   mutate(meters = (elevation * 0.3048)) %>% 
   ggplot(aes(x = meters, y = amount, color = damage, fill = damage))+
   geom_smooth(method = 'gam',
-              formula = y ~ s(x, k = 4))+
+              formula = y ~ s(x, k = 4), show.legend = FALSE)+
   geom_point(size = 4, alpha = 0.6)+
-  theme_bw() +
+  theme_bw() +  
+  scale_color_viridis_d(option = "D", end = 0.85, direction = -1, guide = 'none')+
+  scale_fill_viridis_d(option = "D", end = 0.85, direction = -1, guide = 'none')+
   theme(axis.title = element_text(size=12),
         panel.grid = element_blank(),
         axis.text = element_text(size = 12),
         legend.text = element_text(size = 12),
         axis.ticks.length = unit(.25, 'cm'),
-        legend.title = element_text(size = 12))+
-  guides(color=guide_legend(title="Damage Type"), fill = FALSE)+
-  scale_color_viridis_d(option = "D", end = 0.85, direction = -1)+
-  scale_fill_viridis_d(option = "D", end = 0.85, direction = -1)+
+        legend.title = element_text(size = 12)) +
+  guides(color=guide_legend(title="Damage Type"))+
   labs(x = "Elevation (m)",
        y = "Damage")
 
