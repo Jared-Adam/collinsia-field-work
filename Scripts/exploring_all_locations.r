@@ -363,14 +363,13 @@ final_merge %>%
         axis.ticks.length = unit(.25, 'cm'),
         legend.title = element_text(size = 24),
         legend.position = 'bottom')+
-  guides(color=guide_legend(title="Damage Type", override.aes = list(size = 8)), fill = FALSE)+
+  guides(color=guide_legend(title="Damage Type"), override.aes = list(size = 8), fill = FALSE)+
   scale_fill_brewer(palette = "Dark2")+
   scale_color_brewer(palette = "Dark2")+
   labs(x = "Elevation (m)",
        y = "Damage")
 
-
-
+ 
 
 # WITH geom_point
 
