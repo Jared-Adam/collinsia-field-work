@@ -11,28 +11,34 @@ pf <- X2025_11_4_Pitfalls
 
 # exploration ~ prelim ####
 
-unique(pf$Family)
+unique(pf$Suborder)
 
-pf %>% 
+pf_one <- pf %>% 
   mutate(elevation = case_when(Site == 1 ~ '6100',
                                Site == 2 ~ '6700',
                                Site == 3 ~ '7300',
                                Site == 4 ~ '8200',
                                Site == 5 ~ '8800',
                                Site == 6 ~ '9100')) %>% 
-  select(-Date, -Location, -Method, -Collector, -Species, -notes) %>% 
+  select(-Date, -Location, -Method, -Collector, -Species, -notes, -Genus) %>% 
   relocate(elevation) %>% 
   mutate_at(vars(1:4), as.factor) %>%
   mutate(fxn = case_when(Family %in% c('Formicidae', 'Lycosidae', "Caelifera", "Philodromidae", "Gryllidae", "Reduviidae", 
                                        "Staphylinidae" ,  "Ghaphosidae", "Cybaeidae", "Linyphiidae" ,"Mutillidae" ,
-                                       "Zoropsidae",  "Miturgidae" , "Histeridae"  , "Dapriidae") ~ 'p'),
-         fxn = case_when(Family %in% c("Rhaphidophoridae", "Cicadelidae", "Berytidae", "Fulgroid" , "Curculionidae",
+                                       "Zoropsidae",  "Miturgidae" , "Histeridae"  , "Dapriidae") ~ 'p',
+                         Family %in% c("Rhaphidophoridae", "Cicadelidae", "Berytidae", "Fulgroid" , "Curculionidae",
                                        "Scarabiidae" , "Tenebrionidae" ,"Chrysomeldiae?" , "Scarabaeidae" , "Tipulidae",
-                                       "Aphidae") ~ 'h'),
-         fxn = case_when(Family %in% c("Berytidae", "Elateridae", "Carabidae", "Coccinellidae") ~ "o")) %>% 
-  print(n = 150)
-         
-         
+                                       "Aphidae") ~ 'h',
+                         Family %in% c("Berytidae", "Elateridae", "Carabidae", "Coccinellidae") ~ "o",
+                         Order %in% c("Lepidoptera", "Acari", "Collembola", "Diplopoda", "Archaeognatha", "Diplododa") ~ 'h',
+                         Order %in% c("Chilopoda") ~ 'p',
+                         Order %in% c("Diptera", "Dermaptera", "Opiliones") ~ 'o',
+                         Suborder %in% c("Sternorrhyncha","Auchenorrhyncha", "Caelifera") ~ 'h',
+                         Suborder %in% c("Aprocita") ~ 'p'))
+unique(pf_one$fxn)
+
+ggplot(pf_one, aes(x = elevation, y = fxn))+
+  geom_point()
          
          
          
