@@ -22,7 +22,6 @@ pf_one <- pf %>%
                                Site == 6 ~ '9100')) %>% 
   select(-Date, -Location, -Method, -Collector, -Species, -notes, -Genus) %>% 
   relocate(elevation) %>% 
-  mutate_at(vars(1:4), as.factor) %>%
   mutate(fxn = case_when(Family %in% c('Formicidae', 'Lycosidae', "Caelifera", "Philodromidae", "Gryllidae", "Reduviidae", 
                                        "Staphylinidae" ,  "Ghaphosidae", "Cybaeidae", "Linyphiidae" ,"Mutillidae" ,
                                        "Zoropsidae",  "Miturgidae" , "Histeridae"  , "Dapriidae") ~ 'p',
@@ -34,11 +33,22 @@ pf_one <- pf %>%
                          Order %in% c("Chilopoda") ~ 'p',
                          Order %in% c("Diptera", "Dermaptera", "Opiliones") ~ 'o',
                          Suborder %in% c("Sternorrhyncha","Auchenorrhyncha", "Caelifera") ~ 'h',
-                         Suborder %in% c("Aprocita") ~ 'p'))
+                         Suborder %in% c("Aprocita") ~ 'p')) %>% 
+  mutate_at(vars(1:4), as.factor) 
 unique(pf_one$fxn)
 
-ggplot(pf_one, aes(x = elevation, y = fxn))+
-  geom_point()
+
+# obtain counts ####
+
+pf_count <- pf_one %>% 
+  group_by(elevation, sun_shade) %>% 
+  count(fxn) %>% 
+  rename(q = sun_shade) %>% 
+  na.omit(TRUE) %>% 
+  print(n = Inf)
+
+
+
          
          
          
