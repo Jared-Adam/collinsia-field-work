@@ -48,6 +48,15 @@ pf_count <- pf_one %>%
   print(n = Inf)
 
 
+pf_ant <- pf_one %>% 
+  subset(Family == 'Formicidae')%>% 
+  group_by(elevation, sun_shade) %>% 
+  count(fxn) %>% 
+  rename(q = sun_shade) %>% 
+  na.omit(TRUE) %>% 
+  print(n = Inf)
+
+
 
          
          
