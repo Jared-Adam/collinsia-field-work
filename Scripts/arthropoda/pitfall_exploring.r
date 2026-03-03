@@ -7,6 +7,7 @@ library(tidyverse)
 
 pf_count
 pf_one
+pf_ant
 pf
 
 
@@ -109,5 +110,36 @@ ggsave('omnivoressXelev.pdf',
        units='in',
        dpi=600)
 
+
+# Formicidae ####
+
+ant_elevation <- pf_ant %>% 
+  mutate(elevation = as.numeric(levels(elevation))[elevation]) %>%
+  mutate(meters = (elevation * 0.3038)) %>% 
+  mutate(q = case_when(q == '1' ~ 'Sun',
+                       q == '2' ~ 'Shade')) %>% 
+  ggplot(aes(x = meters, y = n, color = q))+
+  geom_smooth(method = 'gam',
+              formula = y ~ s(x, k =4))+
+  geom_point(size = 4)+
+  labs(y = 'Count', x = 'Elevation (m)', title = 'Truman Gulch: Formicidae x Elevation')+
+  theme_bw() +
+  theme(title = element_text(size = 24),
+        axis.title = element_text(size=24),
+        panel.grid = element_blank(),
+        plot.subtitle = element_text(size=20, hjust = 0.5),
+        axis.text = element_text(size = 24),
+        legend.text = element_text(size = 18),
+        axis.ticks.length = unit(.25, 'cm'),
+        legend.title = element_blank())+
+  scale_color_brewer(palette = "Dark2")+
+  scale_x_continuous(breaks = seq(1850,2700, by = 200))
+
+ggsave('AntXelev.pdf',
+       ant_elevation,
+       width = 10,
+       height = 6,
+       units='in',
+       dpi=600)
 
 
