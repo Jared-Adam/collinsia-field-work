@@ -10,6 +10,9 @@ wue <- X2026_7_8_WUE_pilot
 
 # view ####
 
+
+# bar to psi is 1 bar = 14.504 psi
+
 wue %>% 
   mutate(trt = as.factor(trt),
          plant = as.factor(plant), 
