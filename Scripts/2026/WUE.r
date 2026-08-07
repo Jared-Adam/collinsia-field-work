@@ -71,7 +71,7 @@ mos %>%
 
 unique(wue_mc$date)
 
-wue_mc %>% 
+WUE_MC_plot <- wue_mc %>% 
   slice(-29) %>% # omit scenesing plant 
   select(-notes) %>% 
   mutate(trt = as.factor(trt),
@@ -104,7 +104,12 @@ wue_mc %>%
   scale_color_brewer(palette = "Dark2")+
   labs(x = "Time of day (24hr)",
        y = "PSI")
-
+ ggsave("WUE_MC_plot.pdf",
+        WUE_MC_plot,
+        width = 16,
+        height = 6,
+        units = 'in', 
+        dpi = 600)
 
 
 
