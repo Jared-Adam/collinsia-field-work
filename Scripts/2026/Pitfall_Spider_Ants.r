@@ -17,7 +17,7 @@ pf <- pf %>% # match q name
 df <- inner_join(q, pf, by = "qtag") 
 unique(df$loc)
 
-df %>% 
+df_c <- df %>% 
   mutate(el = case_when(band == '1' & loc == 'MC' ~ '5400',
                         band == '2'& loc == 'MC' ~'6150',
                         band == '3' & loc == 'MC'~ '6320',
@@ -49,18 +49,61 @@ df %>%
                         band == '7' & loc == 'HR' ~ '8000')) %>%
   mutate(el = as.numeric(el)) %>% 
   mutate(el = el*0.3) %>% 
-  relocate(Date, el) %>% 
-  ggplot(aes(x = band, y = Spiders))+
+  mutate(qnum = as.factor(qnum)) %>% 
+  relocate(Date, el)
+
+spider <- ggplot(df_c, aes(x = el, y = Spiders))+
   geom_smooth(method = 'gam',
-              formula = )
+              formula = y ~s (x, k =4 ))+
+  #geom_point(aes(shape = qnum, size = 3))+
+  theme_bw() +
+  xlab("Elevation (m)")+
+  ylab("Spiders")+
+  labs(title = "Spiders x Elevation (all Loc)")+
+  theme(axis.title = element_text(size=24),
+        panel.grid = element_blank(),
+        plot.title = element_text(size=24),
+        axis.text = element_text(size = 24),
+        legend.text = element_text(size = 18),
+        axis.ticks.length = unit(.25, 'cm'),
+        legend.title = element_text(size = 20),
+        strip.text.x = element_text(size = 20))+
+  scale_x_continuous(breaks = seq(1620, 3000, by = 160))+
+  ylim(0,6)
+
+ggsave("Spider_PF.pdf", 
+       spider, 
+       width = 16, 
+       height = 6, 
+       units = 'in', 
+       dpi = 600)
   
-  
-  
-  
-# notes for the elevations 
-  # IR , 1 5500, 2 5650, 3 6300, 4 6650, 5 6950, 6 7500, 81 8120, 82 8300, 91 8600, 92 9000, 10 9500 
-  # HR , 1 5600, 2 5900, 3 6300, 4 6750, 5 7100, 6 7600, 7 8000
-  
+ant <- ggplot(df_c, aes(x = el, y = Ants))+
+  geom_smooth(method = 'gam',
+              formula = y ~s (x, k =4 ))+
+  #geom_point(aes(shape = qnum, size = 3))+
+  theme_bw() +
+  xlab("Elevation (m)")+
+  ylab("Ants")+
+  labs(title = "Ants x Elevation (all Loc)")+
+  theme(axis.title = element_text(size=24),
+        panel.grid = element_blank(),
+        plot.title = element_text(size=24),
+        axis.text = element_text(size = 24),
+        legend.text = element_text(size = 18),
+        axis.ticks.length = unit(.25, 'cm'),
+        legend.title = element_text(size = 20),
+        strip.text.x = element_text(size = 20))+
+  scale_x_continuous(breaks = seq(1620, 3000, by = 160))+
+  ylim(0,NA) 
+
+ggsave("Ant_PF.pdf", 
+       ant, 
+       width = 16, 
+       height = 6, 
+       units = 'in',
+       dpi = 600) 
+
   
   
   
