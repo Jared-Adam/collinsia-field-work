@@ -26,7 +26,7 @@ df_1 <- meta %>%
 
 
 
-# combine the coluns to get a factor-level BSQ of all in one column 
+# combine the columns without local to get a factor-level BSQ of all in one column 
 df_2 <- meta %>% 
   filter(Band.Site.Qdrat == 'na' & L_n != 'na') %>% 
   mutate_at(8:11, as.numeric) %>% 
@@ -45,5 +45,5 @@ df_2 <- meta %>%
 
 # joining
 
-bind_rows(df_1, df_2) %>% 
+den_df <- bind_rows(df_1, df_2) %>% 
   print(n = Inf)
