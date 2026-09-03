@@ -10,5 +10,29 @@ cp = as_tibble(read.csv(cp.dir))
 
 # cleaning ####
 
+cp
+
 cp %>% 
-  select(-21, -22, -23, -24, -25, -26)
+  select(-21, -22, -23, -24, -25, -26) %>% 
+  slice(1:100) %>% 
+  mutate(test =
+           case_when(
+             EFN.score == "1" ~ paste0("0", ",", EFN.ct),
+             EFN.score == "2" ~ paste0(EFN.ct, ",", "0"),
+             EFN.ct == "0" ~ paste0("0", ",", "0"),
+             .default = EFN.ct
+           )
+  ) %>% 
+  separate_wider_delim(
+    cols = test,
+    delim = ",",
+    names = c("EFN_sc_2", "EFN_sc_1")) %>% 
+  select(-c(18,19)) %>% 
+  mutate(across(
+    .cols = c(5:16, 18:20),
+    .fns = ~case_when(
+      D1_p == 'dead' ~ NA,
+      TRUE ~ .x
+    )
+  )) %>% 
+  print(n = Inf)
