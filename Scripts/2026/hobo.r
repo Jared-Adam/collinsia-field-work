@@ -27,5 +27,6 @@ cols <- test %>%
     names = c("date", "time")
   )
 
-unique(cols$qtag)
+test <- cols %>% 
+  slice(1:1000)
 
