@@ -9,25 +9,35 @@ library(readr)
 
 path <- list.files(path = "Data/2026/1csv", pattern = "\\.csv$", full.names = TRUE)
 
-tester <- map(path, read_csv) %>% 
+names(path) <- basename(path)
+
+
+# tester <- map(~ {
+#   read_csv(path) %>% 
+#     rename("plot_id" = 1)
+# }) %>% 
+#   bind_rows(.id = "name")
+
+tester <- path %>% # I had many different column names in the Q spot
+  map(function(x){ # map to work across all csvs
+    read_csv(x, show_col_types = FALSE) %>% 
+      rename(Q=1) # adds the plot label Q to the first column of value of each csv
+  }) %>% 
   bind_rows()
 
+# test <-  path %>% 
+#   map(~ read_csv(.x) %>% 
+#   rename(Q = 1)) %>% 
+#   reduce(full_join, by = "Q")
 
-
-test <-  path %>% 
-  map(~ read_csv(.x) %>% 
-  rename(Q = 1)) %>% 
-  reduce(full_join, by = "Q") %>% 
-  print(n = 10)
-
-cols <- test %>% 
+cols <- tester %>% 
   select(1:4) %>% 
   rename(qtag = Q,
-  number = "#.x",
-  temp_f = "Temp, °F (LGR S/N: 10567939, SEN S/N: 10567939, LBL: 1B3G)"
+  number = "#",
+  temp_f = "T"
   ) %>% 
   separate_wider_delim(
-    cols = 'Date Time, GMT-06:00.x',
+    cols = 'Date Time, GMT-06:00',
     delim = " ",
     names = c("date", "time")
   )
