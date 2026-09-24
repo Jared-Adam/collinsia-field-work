@@ -169,3 +169,26 @@ ggplot(clean, aes(x = date, y = temp))+
   facet_wrap(~qid, scales = 'fixed')
 
 
+# writing a function to automate some plots 
+
+my_plot_func <- function(qid, clean) {
+  subset_data <- filter(clean, qid == qid)
+  
+  p <- ggplot(subset_data, aes(x = date, y = temp)) +
+    geom_point() +
+    labs(title = paste("Plot for:", qid)) +
+    theme_minimal()
+  
+  # Optional: Save each plot automatically
+  ggsave(filename = paste0("plot_", qid, ".png"), plot = p,
+  width = 14,
+  height = 10, 
+  unit = 'in')
+  
+  return(p)
+}
+
+# 2. Get unique values and map the function across them
+unique_groups <- unique(clean$qid)
+all_plots <- map(unique_groups, ~ my_plot_func(.x, clean))
+
