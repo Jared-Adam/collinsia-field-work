@@ -1,7 +1,7 @@
 # packages ####
 library(tidyverse)
 library(readr)
-
+library(ggridges)
 # data ####
 
 # step 1: change 1:1 to "q" on all .csv files
@@ -164,6 +164,7 @@ clean %>%
   ggplot(aes(x = date, y = temp_f))+
   geom_point() 
 
+# all together 
 ggplot(clean, aes(x = date, y = temp))+
   geom_point()+
   facet_wrap(~qid, scales = 'fixed')
@@ -171,16 +172,16 @@ ggplot(clean, aes(x = date, y = temp))+
 
 # writing a function to automate some plots 
 
-my_plot_func <- function(qid, clean) {
-  subset_data <- filter(clean, qid == qid)
+my_plot_func <- function(qid, clean) { # variable, data set
+  subset_data <- filter(clean, qid == qid) # what I want the name of the column to be for the loop 
   
   p <- ggplot(subset_data, aes(x = date, y = temp)) +
     geom_point() +
-    labs(title = paste("Plot for:", qid)) +
+    labs(title = paste("Plot for:", qid)) + # automate a title change 
     theme_minimal()
   
-  # Optional: Save each plot automatically
-  ggsave(filename = paste0("plot_", qid, ".png"), plot = p,
+  # Save each plot automatically
+  ggsave(filename = paste0("plot_", qid, ".png"), plot = p, # save and automate the naming 
   width = 14,
   height = 10, 
   unit = 'in')
@@ -188,7 +189,11 @@ my_plot_func <- function(qid, clean) {
   return(p)
 }
 
-# 2. Get unique values and map the function across them
 unique_groups <- unique(clean$qid)
 all_plots <- map(unique_groups, ~ my_plot_func(.x, clean))
+
+# next steps : 
+# omit all of the bad data reads
+# layer all of the plots on top of one another using... 
+# collect annual averages by elevation and plot those points 
 
