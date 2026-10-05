@@ -192,8 +192,54 @@ my_plot_func <- function(qid, clean) { # variable, data set
 unique_groups <- unique(clean$qid)
 all_plots <- map(unique_groups, ~ my_plot_func(.x, clean))
 
+
 # next steps : 
-# omit all of the bad data reads
-# layer all of the plots on top of one another using... 
+# omit all of the bad data reads ####
+# omit: 696, 667, 71
+
+clean1 <- clean %>% 
+  dplyr::filter(!qid %in%  c("696", "q667", "q71")) 
+
+clean1 <- clean1 %>% 
+  mutate( elevation = round(elevation, digits = 0))
+
+
+
+# ggridge
+clean1 %>% 
+  mutate(elevation = as.factor(elevation)) %>% 
+  ggplot(aes(x = temp, y = elevation)) +
+  geom_density_ridges_gradient()+
+  scale_fill_viridis_c() 
+  # this will not fill, why? : not resolved yet (9/24)
+
+?ggridges
 # collect annual averages by elevation and plot those points 
 
+# average plot ####
+avg_plot <- clean1 %>%
+  group_by(qid, elevation) %>% 
+  summarise(
+    mean = mean(temp)
+  ) %>% 
+  ggplot(aes(x = elevation, y = mean)) + 
+  geom_point()+
+  theme_bw()+
+  labs(
+    title = "Average soil temperature",
+    x = "Elevation (m)",
+    y = "Average temperature (C)"
+  )
+
+ggsave("avg_hobo_tremp.jpg", avg_plot,
+height = 8,
+width = 8, 
+unit = 'in')
+?ggsave
+
+# GAM plot ####
+
+clean1 %>% 
+  ggplot(aes(x = elevation, y = temp))+
+   geom_smooth(method = 'gam',
+              formula = y ~s (x, k =4 ))
