@@ -239,7 +239,23 @@ unit = 'in')
 
 # GAM plot ####
 
-clean1 %>% 
+hobo_gam <- clean1 %>% 
   ggplot(aes(x = elevation, y = temp))+
    geom_smooth(method = 'gam',
-              formula = y ~s (x, k =4 ))
+              formula = y ~s (x, k =4 ))+
+  theme_bw()+
+  labs(
+    title = "Average soil temperature",
+    x = "Elevation (m)",
+    y = "Average temperature (C)"
+  )
+ggsave("hobo_gam.jpg", hobo_gam,
+height = 8,
+width = 8,
+unit = 'in')
+
+
+# models ####
+
+# the start dates are not the same, so when it comes time to model, 
+# might be worth truncating the beginning to the first day of the last-out hobo
