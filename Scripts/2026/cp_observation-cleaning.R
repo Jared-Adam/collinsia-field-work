@@ -204,3 +204,46 @@ cleaned_df <- labeled_df %>%
   relocate(Date, loc, band, el, qid, rep, Tag, D1_p, D2_p, D3_p, D6_p, D7_p) %>% 
   mutate_at(8:12, as.numeric)
 
+dmg_plots_raw <- function(data, x_col, y_col){
+
+ggplot(cleaned_df, aes(x = el, y = .data[[y_col]]))+
+  geom_smooth(method = 'gam', formula = y ~ s (x, k = 4))+
+  geom_point()+
+  theme_bw()+
+  ylim(0,100)
+}
+
+y_variables = c('D1_p', 'D2_p', 'D3_p', 'D6_p', 'D7_p')
+
+
+raw_damage_plots <- map(y_variables, ~ dmg_plots_raw(data = cleaned_df, x_col = el, y_col = .x))
+raw_damage_plots[[1]]
+
+walk2(y_variables, raw_damage_plots, 
+  ~ggsave(filename = paste0("raw_plot_", .x, ".png"), plot = .y,
+width = 8,
+height = 8,
+unit = 'in'))
+
+
+dmg_plots_gam <- function(data, x_col, y_col){
+
+  ggplot(cleaned_df, aes(x = el, y = .data[[y_col]]))+
+    geom_smooth(method = 'gam', formula = y ~ s (x, k=4))+
+    theme_bw()
+    #labs(title = paste("Relationship between", x_col, "and", y_col))
+}
+y_variables = c('D1_p', 'D2_p', 'D3_p', 'D6_p', 'D7_p')
+
+
+gam_damage_plots <- map(y_variables, ~ dmg_plots_gam(data = cleaned_df, x_col = el, y_col = .x))
+gam_damage_plots
+
+walk2(y_variables, gam_damage_plots, 
+  ~ggsave(filename = paste0("gam_plot_", .x, ".png"), plot = .y,
+width = 8,
+height = 8,
+unit = 'in'))
+
+
+
