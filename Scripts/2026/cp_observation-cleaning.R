@@ -78,12 +78,96 @@ look <- debug %>% filter(!test_ok) %>%
   relocate(EFN.ct, EFN.score, test) %>% 
   print(n = Inf)
 
-# EFN vis ####
 
+# now getting rid of the NAs as they are not pertinent to EFNs
 next_df <- debug
 
+###
+##
+#
 # DROPPING NA FOR NOW (10/6/2026)
 again_df <- next_df %>% 
   mutate(across(where(is.character), ~na_if(., "na"))) %>% 
   drop_na()
+#
+##
+###
 
+
+# add elevation ####
+# going to add a band column and assign that by qid and then add elev ~ band
+
+labeled_df <- again_df %>% 
+  rename(id = Qdrat.ID) %>% 
+  mutate(band = case_when(
+    id == "813" | id == '838' | id == "794" | id == "71" | id == "893" | id == "891" | id == "914" | id == "945" | id == "898" ~ "1",
+    id == "883" | id == "34" | id == "15" | id == "76" | id == "80" | id == "6" | id == " 457" | id == "416" | id == "458" ~ "2",
+    id == "3" | id == "29" | id == "433"| id == "96" | id == "38"| id == "94"| id == "667"| id == "815" | id == "610" ~ "3",
+    id == "320"| id == "387" | id == "302" | id == "623" | id == "639" | id == "687" | id == "259" | id == "258" | id == "285" ~ "4",
+    id == "311" | id == "319" | id == "347" | id == "574" | id == "695" | id == "636" | id == "218" | id == "240" | id == "227" ~ "5",
+    id == "652" | id == "989" | id == "626" | id == "674" | id == "660" | id == "683" | id == "634" | id == "611" | id == "609" ~ "6",
+    id == "696" | id == "670" | id == "899" | id == "624" | id == "672" | id == "632" | id == "614" | id == "629" | id == "642" ~ "7",
+    id == "699" | id == "98" | id == "640" | id == "698" | id == "697" | id == "604" | id == "619" | id == "691" | id == "650" ~ "8",
+    id == "655" | id == "700" | id == "41" | id == "620" | id == "78" | id == "36" | id == "263" | id == "17" | id == "730" ~ "9",
+    id == "63" | id == "905" | id == "105" | id == "88" | id == "49" | id == "637" | id == "27" | id == "13" | id == "81" ~ "10",
+    .default = as.character(id)
+  )) %>% 
+  mutate(loc = case_when(
+    id == "813" | id == '838' | id == "794" | id == "883" | id == "34" | id == "15" | id == "3" | id == "29" | id == "433" | id == "320"| id == "387" | id == "302" |
+      id == "311" | id == "319" | id == "347" | id == "652" | id == "989" | id == "626" | id == "696" | id == "670" | id == "899" | id == "699" | id == "98" | id == "640" | 
+      id == "655" | id == "700" | id == "41" | id == "63" | id == "905" | id == "105" | id == "698" | id == "697" | id == "604" | id == "620" | id == "78" | id == "36" ~ "IR",
+    id == "71" | id == "893" | id == "891" | id == "76" | id == "80" | id == "6" | id == "96" | id == "38"| id == "94"| id == "623" | id == "639" | id == "687" |
+      id == "574" | id == "695" | id == "636" | id == "674" | id == "660" | id == "683" | id == "624" | id == "672" | id == "632" ~ "HR",
+    id == "914" | id == "945" | id == "898" | id == " 457" | id == "416" | id == "458" | id == "667"| id == "815" | id == "610" | id == "259" | id == "258" | id == "285" |
+      id == "218" | id == "240" | id == "227" | id == "634" | id == "611" | id == "609" | id == "614" | id == "629" | id == "642" | id == "619" | id == "691" | id == "650"|
+       id == "263" | id == "17" | id == "730" | id == "88" | id == "49" | id == "637" | id == "27" | id == "13" | id == "81" ~ "MC",
+    .default = as.character(id)
+  )) %>% 
+  mutate(rep = case_when(
+    id == "699" | id == " 98" | id == "640" | id == "655" | id == "700" | id == "41" | id == "88" | id == "49" | id == "637" ~ "1",
+    id == "27" | id == "13" | id == "81" | id == "687" | id == "697" | id == "604" | id == "620" | id == "78" | id == "36" ~ "2",
+    .default = NULL
+  )) %>% 
+  mutate(el = case_when(band == '1' & loc == 'MC' ~ '5400',
+                        band == '2'& loc == 'MC' ~'6150',
+                        band == '3' & loc == 'MC'~ '6320',
+                        band == '4' & loc == 'MC'~ '6760', 
+                        band == '5' & loc == 'MC'~ '7200',
+                        band == '6' & loc == 'MC'~ '7900', 
+                        band == '7' & loc == 'MC'~ '8200',
+                        band == '8'& loc == 'MC' ~ '8370',
+                        band == '9' & loc == 'MC'~ '8800',
+                        band == '10'& loc == 'MC' ~ '9150', 
+                        band == '1' & loc == 'IR' ~ '5500', 
+                        band == '2' & loc == 'IR' ~ '5650', 
+                        band == '3' & loc == 'IR' ~ '6300',
+                        band == '4' & loc == 'IR' ~ '6650', 
+                        band == '5' & loc == "IR" ~ '6950', 
+                        band == '6' & loc == 'IR' ~ '7500', 
+                        band == '7' & loc == 'IR' ~ '8120',
+                        band == '8' & loc == 'IR' & rep == '1' ~ '8120',
+                        band == '8' & loc == 'IR' & rep == '2' ~ '8300',
+                        band == '9' & loc == 'IR' & rep == '1' ~ '8600',
+                        band == '9' & loc == 'IR' & rep == '2' ~ '9000', 
+                        band == '10' & loc == 'IR' ~ '9500',
+                        band == '1' & loc == 'HR' ~ '5600',
+                        band == '2' & loc == 'HR' ~ '5900',
+                        band == '3' & loc == 'HR' ~ '6300',
+                        band == '4' & loc == 'HR' ~ '6750', 
+                        band == '5' & loc == 'HR' ~ '7100', 
+                        band == '6' & loc == 'HR' ~ '7600',
+                        band == '7' & loc == 'HR' ~ '8000')) %>%
+  mutate(el = as.numeric(el)) %>% 
+  mutate(el = el*0.3) %>% 
+  mutate(qid = as.factor(id)) %>% 
+  relocate(Date, loc, band, el, qid, rep) %>% 
+  select(-7)
+
+
+
+
+# EFN vis ####
+labeled_df
+
+labeled_df %>% 
+  ggplot(aes())
