@@ -170,4 +170,37 @@ labeled_df <- again_df %>%
 labeled_df
 
 labeled_df %>% 
-  ggplot(aes())
+  mutate(EFN.ct = as.numeric(EFN.ct)) %>% 
+  ggplot(aes(el, EFN.ct))+
+  geom_smooth(method = 'gam',
+formula = y~s (x, k = 4))+
+  geom_point()
+
+
+# damage vis ####
+
+colnames(labeled_df)
+cleaned_df <- labeled_df %>%
+  mutate(d6_splitter = case_when(
+    D6_c.p == "0" ~ paste0("0",",",D6_c.p),
+    .default = D6_c.p
+  )) %>% 
+  separate_wider_delim(
+    cols = d6_splitter, 
+    delim = ",", 
+    names = c("D6_ct", "D6_p"),
+    too_few = "debug"
+  ) %>% 
+  mutate(d7_splitter = case_when(
+    D7_c.p == "0" ~ paste0("0", ",", D7_c.p),
+    .default = D7_c.p
+  )) %>% 
+  separate_wider_delim(
+    d7_splitter, 
+    delim = ",", 
+    names = c("D7_ct", "D7_p"),
+    too_few = "debug"
+  ) %>% 
+  relocate(Date, loc, band, el, qid, rep, Tag, D1_p, D2_p, D3_p, D6_p, D7_p) %>% 
+  mutate_at(8:12, as.numeric)
+
