@@ -163,8 +163,25 @@ labeled_df <- again_df %>%
   relocate(Date, loc, band, el, qid, rep) %>% 
   select(-7)
 
+###
+##
+# 
+# This is not done! There are 6 instances of missing plots, come back to this 
+# ALSO opne instance of a messed up IR
+# 
+##
+###
 
-
+# A tibble: 36 × 8
+# Groups:   loc, band [33]
+#    loc   band     el   D1_p   D2_p  D3_p    D6_p    D7_p
+#    <chr> <chr> <dbl>  <dbl>  <dbl> <dbl>   <dbl>   <dbl>
+#  1 457   457      NA 17.8   0.0600 0.371 0       0.135  
+#  2 62    62       NA  3.80  3.49   4.01  0.455   0      
+#  3 654   654      NA  0     0      0.633 0       0      
+#  4 668   668      NA  5.63  0      1.78  0       0      
+#  5 69    69       NA  0     0      0     0       0      
+#  6 910   910      NA  0     0      3.05  0       0 
 
 # EFN vis ####
 labeled_df
@@ -245,5 +262,46 @@ width = 8,
 height = 8,
 unit = 'in'))
 
+# plot of average damage type 
 
+wide_sum <- cleaned_df %>% 
+  group_by(loc, band, el) %>% 
+  summarise(across(c('D1_p', 'D2_p', 'D3_p', 'D6_p', 'D7_p'), mean, na.rm = TRUE)) %>% 
+  drop_na() %>% 
+  print(n = Inf)
+
+wide_dmg_plots_raw <- function(data, x_col, y_col){
+ggplot(data = wide_sum, aes(x = el, y = .data[[y_col]]))+
+  geom_smooth(method = 'gam',
+  formula= y ~ s(x, k=4))+
+  geom_point()+
+  theme_bw()
+
+}
+y_variables = c('D1_p', 'D2_p', 'D3_p', 'D6_p', 'D7_p')
+
+wide_dmg_mean_raw <- map(y_variables, ~wide_dmg_plots_raw(data = wide_sum, x_col = el, y_col = .x))
+walk2(y_variables, wide_dmg_mean_raw, 
+  ~ggsave(filename = paste0("mean_raw_plot_", .x, ".png"), plot = .y,
+width = 8,
+height = 8,
+unit = 'in'))
+
+# long wise for total damage 
+
+cleaned_df %>% 
+  group_by(loc, band, el) %>% 
+  select(1:12) %>% 
+  pivot_longer(c('D1_p', 'D2_p', 'D3_p', 'D6_p', 'D7_p'),
+names_to = "dmg_type",
+values_to = "dmg_p") %>% 
+  ungroup() %>% 
+  group_by(el) %>% 
+  summarise(mean = mean(dmg_p, na.rm = TRUE)) %>% 
+  ggplot(aes(x = el, y = mean))+
+  geom_smooth(method = 'gam',
+formula = y~s(x, k=4))+
+  geom_point()+
+  theme_bw()+
+  labs(title = "Average of all damage types X el")
 
