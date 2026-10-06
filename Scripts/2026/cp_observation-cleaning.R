@@ -42,9 +42,18 @@ cp %>%
 
 
 # pick up here, this is not working. Why?
-# debug fail 
+# there are several rows with nonsense. some dots, some unsre
+# starting with removal of dots
+
+cp %>% 
+  filter(str_detect(EFN.ct, "\\.")) %>% # dots are wildcards, so must be preceded with \\
+  mutate(EFN.ct = str_replace_all(EFN.ct, "\\.", ","))
+
+
+
 debug <- cp %>% 
-  select(-21, -22, -23, -24, -25, -26) %>% 
+  select(-21, -22, -23, -24, -25, -26) %>%
+  mutate(EFN.ct = str_replace_all(EFN.ct, "\\.", ",")) %>% 
   mutate(test =
            case_when(
              EFN.score == "1" ~ paste0("0", ",", EFN.ct),
@@ -58,11 +67,23 @@ debug <- cp %>%
     delim = ",", 
     names = c("EFN_sc_2", "EFN_sc_1"),
     too_few = "debug"
-  ) 
+  ) %>% 
+  filter(test_ok == TRUE) # removing the confusing rows for now
 
-debug %>% filter(!test_ok) %>% 
-  relocate(EFN.ct, EFN.score, test)
+# 10/6/2026:
+  # these do not work becuase the score column is erroneous 
+  # ct has a value >0 but the score is incorrect. These must be found in the data sheets
 
+look <- debug %>% filter(!test_ok) %>% 
+  relocate(EFN.ct, EFN.score, test) %>% 
+  print(n = Inf)
 
+# EFN vis ####
 
+next_df <- debug
+
+# DROPPING NA FOR NOW (10/6/2026)
+again_df <- next_df %>% 
+  mutate(across(where(is.character), ~na_if(., "na"))) %>% 
+  drop_na()
 
