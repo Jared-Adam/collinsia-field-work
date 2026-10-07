@@ -319,6 +319,38 @@ names_to = "dmg_type",
 values_to = "dmg_p") %>% 
   ungroup() 
 
+long_df %>% 
+  filter(dmg_p == -Inf)
+
+
+dmage_labels <- c("D1_p" = "Caterpillar",
+"D2_p" = "Hemipteran/Mite",
+"D3_p" = "Adult Beetle", 
+"D6_p" = "Beetle leaf miner",
+"D7_p" = "Fly leaf miner")
+
+
+# plot of mean damage grouped by el and band
+long_df %>% 
+  group_by(band, el, dmg_type) %>% 
+  summarise(mean = mean(dmg_p, na.rm = TRUE)) %>% 
+  ggplot(aes(x = el, y = mean))+
+  geom_point(size = 2)+
+  facet_grid(cols = vars(dmg_type), labeller = labeller(cols_var = dmage_labels))+ #BROKE
+  xlim(1500,3000)+
+  ylim(0,15)+
+  geom_smooth(method = 'gam',
+formula = y~s(x, k=4))+
+  labs(title = "Mean damage percent x damage type",
+y = "Mean percent damage",
+x = "Elevation (m)")+
+  theme_bw()
+
+
+
+
+
+# grouped by elevation df
 long_mean_df <- cleaned_df %>% 
   group_by(loc, band, el) %>% 
   select(1:12) %>% 
@@ -328,8 +360,6 @@ values_to = "dmg_p") %>%
   ungroup() %>% 
   group_by(el) %>% 
   summarise(mean = mean(dmg_p, na.rm = TRUE)) 
-
-
 
 # I want to split this into dmage by insect by elevational "group"
 # what are those groups?
@@ -406,9 +436,17 @@ D7_value = max(D7_p, na.rm = TRUE)) %>%
   )) %>% 
   mutate(Tag = as.factor(Tag))  
 
+# in the above math there is an issue somewhere that is causing some -Inf values. IDK why
 max_value_df %>% 
+  filter(max_p == -Inf)
+
+e_df <- max_value_df %>% 
   group_by(band, el, dmg_type) %>% 
-  summarise(mean = mean(max_p, na.rm = TRUE)) %>% 
+  filter(max_p != -Inf) %>% 
+  summarise(mean = mean(max_p, na.rm = TRUE)) 
+
+# plot of the max means... Why?
+e_df %>% 
   ggplot(aes(x = el, y = mean))+
   geom_point(size = 2)+
   facet_grid(cols = vars(dmg_type))+
