@@ -155,10 +155,50 @@ clean <- pentDf %>%
   select(-6) %>% 
   print(n = 10)
 
+# joining in the densiometer data ####
+den_to_merge <- den_df %>% 
+  mutate(q_t = paste0("q", q_t)) %>% 
+  rename(qid = q_t) %>% 
+  relocate(qid, den_mean) %>% 
+  select(1:2) %>% 
+  print(n = 10)
+
+test_hobo <- clean %>% 
+  slice_sample(n = 1000) %>% 
+  print(n = 10)
+unique(test_hobo$qid)
+
+test_hobo %>% 
+  left_join(den_to_merge, by = 'qid', relationship = "many-to-many") %>% 
+  ggplot(aes(x = elevation, y = temp))+
+  geom_point(aes(color = den_mean))+
+  scale_color_viridis_c()
+
+# for real now
+
+merged_df <- clean %>% 
+  left_join(den_to_merge, by = 'qid', relationship = "many-to-many") 
+
+merged_df %>% 
+  ggplot(aes(x = elevation, y = temp)) +
+  geom_point(aes(color = den_mean))+
+  scale_color_viridis_b()
+
+merged_df %>% 
+  ggplot(aes(x = den_mean, y = temp))+
+  geom_point(aes(color = elevation)) +
+  scale_color_viridis_c()+
+  theme_bw()+
+  labs(title = "Soil temp x Average densiometer",
+x = "Average densiometer",
+y = "Soil temperature")
+
+
 
 # plotting function ####
 
 # first plot 
+
 clean %>% 
   subset(qid == 'q898') %>%
   ggplot(aes(x = date, y = temp_f))+
