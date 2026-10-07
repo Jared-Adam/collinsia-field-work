@@ -196,6 +196,7 @@ formula = y~s (x, k = 4))+
 
 # damage vis ####
 
+
 colnames(labeled_df)
 cleaned_df <- labeled_df %>%
   mutate(d6_splitter = case_when(
@@ -305,3 +306,77 @@ formula = y~s(x, k=4))+
   theme_bw()+
   labs(title = "Average of all damage types X el")
 
+# hisotgrams? new wrangling? ####
+# such serious data wrangling … 
+# group by plantID, take the max, group by site-band, average….
+
+cleaned_df
+wide_sum
+
+cleaned_df %>% 
+  group_by(loc, band, el) %>% 
+  select(1:12) %>% 
+  pivot_longer(c('D1_p', 'D2_p', 'D3_p', 'D6_p', 'D7_p'),
+names_to = "dmg_type",
+values_to = "dmg_p") %>% 
+  ungroup() %>% 
+  group_by(el) %>% 
+  summarise(mean = mean(dmg_p, na.rm = TRUE)) 
+
+
+# I want to split this into dmage by insect by elevational "group"
+# what are those groups?
+
+
+
+# extract the max damage from each plant 
+cleaned_df %>% # quick vis with the wide df, switching to long
+  group_by(Tag, el, loc) %>% 
+  summarise(D1_value = max(D1_p, na.rm = TRUE),
+D2_value = max(D2_p, na.rm = TRUE),
+D3_value = max(D3_p, na.rm = TRUE),
+D6_value = max(D6_p, na.rm = TRUE),
+D7_value = max(D7_p, na.rm = TRUE)) %>%
+  ungroup() %>% 
+  na.omit() %>% 
+  ggplot(aes(x = el, y = D1_value)) +
+  geom_point()
+
+cleaned_df %>% # just looking at the spread
+  group_by(el) %>% 
+  summarise(max = max(el, na.rm = TRUE)) %>% 
+  print(n = Inf)
+
+max_value_df <- cleaned_df %>% # new df for the max values 
+  group_by(Tag, el, loc, band) %>% 
+  summarise(D1_value = max(D1_p, na.rm = TRUE),
+D2_value = max(D2_p, na.rm = TRUE),
+D3_value = max(D3_p, na.rm = TRUE),
+D6_value = max(D6_p, na.rm = TRUE),
+D7_value = max(D7_p, na.rm = TRUE)) %>%
+  ungroup() %>% 
+  na.omit() %>% 
+  pivot_longer(
+    c('D1_value', 'D2_value', 'D3_value', 'D6_value', 'D7_value'),
+    names_to = 'dmg_type',
+    values_to = 'max_p'
+  ) %>% 
+  mutate(Tag = case_when(
+    Tag == " " ~ 'X', .default = Tag
+  )) %>% 
+  mutate(Tag = as.factor(Tag))  
+
+max_value_df %>% 
+  group_by(band, el, dmg_type) %>% 
+  summarise(mean = mean(max_p, na.rm = TRUE)) %>% 
+  ggplot(aes(x = el, y = mean))+
+  geom_point(size = 2)+
+  facet_grid(cols = vars(dmg_type))+
+  xlim(1500,3000)+
+  ylim(0,15)+
+  geom_smooth(method = 'gam',
+formula = y~s(x, k=4))+
+  labs(title = "Mean damage percent x damage type",
+y = "Mean percent damage",
+x = "Elevation (m)")+
+  theme_bw()
