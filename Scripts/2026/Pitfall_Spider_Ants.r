@@ -106,7 +106,8 @@ ggsave("Ant_PF.pdf",
 
   
   
-  
+# such serious data wrangling … 
+# group by plantID, take the max, group by site-band, average….
   
   
   
