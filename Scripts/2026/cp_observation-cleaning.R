@@ -306,14 +306,20 @@ formula = y~s(x, k=4))+
   theme_bw()+
   labs(title = "Average of all damage types X el")
 
-# hisotgrams? new wrangling? ####
-# such serious data wrangling … 
-# group by plantID, take the max, group by site-band, average….
+# new wrangling? ####
 
 cleaned_df
 wide_sum
 
-cleaned_df %>% 
+long_df <- cleaned_df %>% 
+  group_by(loc, band, el) %>% 
+  select(1:12) %>% 
+  pivot_longer(c('D1_p', 'D2_p', 'D3_p', 'D6_p', 'D7_p'),
+names_to = "dmg_type",
+values_to = "dmg_p") %>% 
+  ungroup() 
+
+long_mean_df <- cleaned_df %>% 
   group_by(loc, band, el) %>% 
   select(1:12) %>% 
   pivot_longer(c('D1_p', 'D2_p', 'D3_p', 'D6_p', 'D7_p'),
@@ -324,11 +330,45 @@ values_to = "dmg_p") %>%
   summarise(mean = mean(dmg_p, na.rm = TRUE)) 
 
 
+
 # I want to split this into dmage by insect by elevational "group"
 # what are those groups?
+# potential groups: Plains: 1800-3000
+# Foothills: 3000-5000
+# Lower slopes/ intermountain: 3000-6000
+# Subalpine: 6000-7500
+# Alpine: 7500+
+
+# get these in meters 
+tibble(name = c('plains', 'foothills','intermountain','subalpine','alpine'),
+value = c(3000, 5000, 6000, 7500, 7501))%>% 
+  mutate(m = value*0.3048)
 
 
+long_df %>% 
+  select(-6) %>% 
+  group_by(loc, band, el, dmg_type, dmg_p) %>% 
+  mutate(zone = case_when(
+    el <= 914 ~ "Plains",
+    el <1524 & el >914 ~ "Foothills",
+    el <1829 & el >1524 ~ "Intermountain",
+    el <2286 & el >1829 ~ "Subalpine",
+    el >= 2286 ~ "Alpine",
+    .default = as.character(el)
+  )) %>% 
+  group_by(band, el, loc, zone, dmg_p) %>% 
+  summarise(standard = mean(dmg_p)*100) %>% 
+  na.omit() %>% 
+  ggplot(aes(x = standard))+
+  geom_histogram()+
+  facet_grid(. ~ factor(zone, levels = c("Intermountain", "Subalpine", "Alpine")))+
+  labs(title= "Relative frequency of damage by elevation zone",
+x = "Relative frequency",
+y = "Count")+
+  theme_bw()
 
+
+# max damage values ####
 # extract the max damage from each plant 
 cleaned_df %>% # quick vis with the wide df, switching to long
   group_by(Tag, el, loc) %>% 
