@@ -84,4 +84,8 @@ den_df %>%
   mutate(el = as.numeric(el)) %>% 
   mutate(el = el*0.3) %>% 
   ggplot(aes(x = el, y = den_mean))+
-  geom_point()
+  geom_point()+
+  theme_bw()+
+  labs(title = "Densiometer x Elevation", 
+x = "Elevation (m)",
+ y= "Average densiometer")
