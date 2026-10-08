@@ -1,6 +1,7 @@
 # packages ####
 library(here)
 library(tidyverse)
+library(ggridges)
 
 
 # data ####
@@ -289,8 +290,8 @@ height = 8,
 unit = 'in'))
 
 # long wise for total damage 
-
-cleaned_df %>% 
+## FOR AYA 10-8-2026
+df_for_avg_plot <- cleaned_df %>% 
   group_by(loc, band, el) %>% 
   select(1:12) %>% 
   pivot_longer(c('D1_p', 'D2_p', 'D3_p', 'D6_p', 'D7_p'),
@@ -298,15 +299,29 @@ names_to = "dmg_type",
 values_to = "dmg_p") %>% 
   ungroup() %>% 
   group_by(el) %>% 
-  summarise(mean = mean(dmg_p, na.rm = TRUE)) %>% 
+  summarise(mean = mean(dmg_p, na.rm = TRUE))
+
+df_for_avg_plot %>% 
   ggplot(aes(x = el, y = mean))+
   geom_smooth(method = 'gam',
 formula = y~s(x, k=4))+
-  geom_point()+
-  theme_bw()+
-  labs(title = "Average of all damage types X el")
+  geom_point(size = 2)+
+  coord_cartesian()+
+  labs(title = "Average total damage by elevation",
+y = "Average percent damage",
+x = "Elevation (m)")+
+  theme_bw(base_size = 24)+
+  theme(
+    axis.title = element_text(size = 24),
+    panel.grid = element_blank(),
+    axis.text = element_text(size = 20))+
+  scale_x_continuous(breaks = c(1600, 1800, 2000, 2200, 2400, 2600, 2800, 3000))
 
-# new wrangling? ####
+ggsave("FinalAvgDamage.pdf", plot = get_last_plot(), height = 10, width = 12, units = 'in', dpi = 300)
+ggsave("FinalAvgDamage.jpg", plot = get_last_plot(), height = 10, width = 12, units = 'in', dpi = 300)
+
+
+# new wrangling? #### 
 
 cleaned_df
 wide_sum
@@ -360,8 +375,8 @@ long_df %>%
   ylim(0,15)+
   geom_smooth(method = 'gam',
 formula = y~s(x, k=4))+
-  labs(title = "Mean damage percent x damage type",
-y = "Mean percent damage",
+  labs(title = "Average damage percent x damage type",
+y = "Average percent damage",
 x = "Elevation (m)")+
   theme_bw(base_size = 24)+
   theme(
@@ -383,6 +398,9 @@ x = "Elevation (m)")+
      breaks = c(1500,2000,2500,3000),labels = NULL)
     )
   )
+
+ggsave("FinalBYDamageType.pdf", plot = get_last_plot(), height = 10, width = 14, units = 'in', dpi = 300)
+ggsave("FinalBYDamageType.jpg", plot = get_last_plot(), height = 10, width = 14, units = 'in', dpi = 300)
 
 
 
@@ -414,7 +432,7 @@ value = c(3000, 5000, 6000, 7500, 7501))%>%
   mutate(m = value*0.3048)
 
 
-long_df %>% 
+zoned_df <- long_df %>% 
   select(-6) %>% 
   group_by(loc, band, el, dmg_type, dmg_p) %>% 
   mutate(zone = case_when(
@@ -427,7 +445,13 @@ long_df %>%
   )) %>% 
   group_by(band, el, loc, zone, dmg_p) %>% 
   summarise(standard = mean(dmg_p)*100) %>% 
-  na.omit() %>% 
+  na.omit() 
+
+# factor reorder of the zone names for ggridges plotting
+zoned_df$zone <- factor(zoned_df$zone, levels = c("Intermountain", "Subalpine", "Alpine"))
+
+
+zoned_df %>% 
   ggplot(aes(x = standard))+
   geom_histogram()+
   facet_grid(. ~ factor(zone, levels = c("Intermountain", "Subalpine", "Alpine")))+
@@ -436,8 +460,23 @@ x = "Relative frequency",
 y = "Count")+
   theme_bw()
 
+zoned_df %>% 
+  ggplot(aes(x = standard, y = zone, fill = zone))+
+  geom_density_ridges(alpha = 0.6)+
+  theme_ridges()+
+  labs(title = "Frequnecy of damage by elevation zone",
+x = "Frequnecy on standardozed percent scale (MIGHT be wrong)",
+y = "",
+fill = "Elevation zone")+
+  theme(
+    axis.title.x = element_text(hjust = .5, size = 14),
+    axis.text = element_text(size = 14)
+  )
+
+
 
 # max damage values ####
+  
 # extract the max damage from each plant 
 cleaned_df %>% # quick vis with the wide df, switching to long
   group_by(Tag, el, loc) %>% 
