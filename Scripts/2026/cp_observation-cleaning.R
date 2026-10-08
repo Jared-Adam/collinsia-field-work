@@ -329,25 +329,7 @@ dmage_labels <- c("D1_p" = "Caterpillar",
 "D6_p" = "Beetle leaf miner",
 "D7_p" = "Fly leaf miner")
 
-# The x axis is cluttered with all the elevations, going to write a function to remove from other facets
-
-# show_one_facet <- function(x){
-#   if(max(x, na.rm = TRUE)>3000){
-#     return(scales::label_extended()(x))
-#   }else{
-#     return(rep("", length(x)))
-#   }
-# }
-
-# show_one_facet <- function(x){
-#   facet_counter <- facet_counter+1
-
-#   if(facet_counter ==2) {
-#     return(scales::label_extended()(x))
-#   } else{
-#     return(rep("", length(x)))
-#   }
-#   }
+# The x axis is cluttered with all the elevations, going to remove from other facets w ggh4x
 
 # plot of mean damage grouped by el and band
 long_df %>% 
