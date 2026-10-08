@@ -329,6 +329,25 @@ dmage_labels <- c("D1_p" = "Caterpillar",
 "D6_p" = "Beetle leaf miner",
 "D7_p" = "Fly leaf miner")
 
+# The x axis is cluttered with all the elevations, going to write a function to remove from other facets
+
+# show_one_facet <- function(x){
+#   if(max(x, na.rm = TRUE)>3000){
+#     return(scales::label_extended()(x))
+#   }else{
+#     return(rep("", length(x)))
+#   }
+# }
+
+# show_one_facet <- function(x){
+#   facet_counter <- facet_counter+1
+
+#   if(facet_counter ==2) {
+#     return(scales::label_extended()(x))
+#   } else{
+#     return(rep("", length(x)))
+#   }
+#   }
 
 # plot of mean damage grouped by el and band
 long_df %>% 
@@ -336,7 +355,7 @@ long_df %>%
   summarise(mean = mean(dmg_p, na.rm = TRUE)) %>% 
   ggplot(aes(x = el, y = mean))+
   geom_point(size = 2)+
-  facet_grid(cols = vars(dmg_type), labeller = labeller(cols_var = dmage_labels))+ #BROKE
+  facet_grid(~dmg_type, labeller = labeller(dmg_type = dmage_labels), scales = "free_x")+ 
   xlim(1500,3000)+
   ylim(0,15)+
   geom_smooth(method = 'gam',
@@ -344,13 +363,33 @@ formula = y~s(x, k=4))+
   labs(title = "Mean damage percent x damage type",
 y = "Mean percent damage",
 x = "Elevation (m)")+
-  theme_bw()
+  theme_bw(base_size = 24)+
+  theme(
+    axis.title = element_text(size = 24),
+    panel.grid = element_blank(),
+    axis.text = element_text(size = 20)
+  )+
+  facetted_pos_scales(
+    x = list(
+     scale_x_continuous(limits = c(1500,3000),
+     breaks = c(1500,2000,2500,3000),
+     labels = NULL),
+     scale_x_continuous(limits = c(1500,3000),
+     breaks = c(1500,2000,2500,3000),labels = NULL),
+     scale_x_continuous(limits = c(1500,3000)),
+     scale_x_continuous(limits = c(1500,3000),
+     breaks = c(1500,2000,2500,3000),labels = NULL),
+     scale_x_continuous(limits = c(1500,3000),
+     breaks = c(1500,2000,2500,3000),labels = NULL)
+    )
+  )
 
 
 
 
 
 # grouped by elevation df
+
 long_mean_df <- cleaned_df %>% 
   group_by(loc, band, el) %>% 
   select(1:12) %>% 
