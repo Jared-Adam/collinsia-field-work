@@ -155,49 +155,14 @@ clean <- pentDf %>%
   select(-6) %>% 
   print(n = 10)
 
-# joining in the densiometer data ####
-den_to_merge <- den_df %>% 
-  mutate(q_t = paste0("q", q_t)) %>% 
-  rename(qid = q_t) %>% 
-  relocate(qid, den_mean) %>% 
-  select(1:2) %>% 
-  print(n = 10)
+clean1 <- clean %>% 
+  dplyr::filter(!qid %in%  c("696", "q667", "q71")) 
 
-test_hobo <- clean %>% 
-  slice_sample(n = 1000) %>% 
-  print(n = 10)
-unique(test_hobo$qid)
-
-test_hobo %>% 
-  left_join(den_to_merge, by = 'qid', relationship = "many-to-many") %>% 
-  ggplot(aes(x = elevation, y = temp))+
-  geom_point(aes(color = den_mean))+
-  scale_color_viridis_c()
-
-# for real now
-
-merged_df <- clean %>% 
-  left_join(den_to_merge, by = 'qid', relationship = "many-to-many") 
-
-merged_df %>% 
-  ggplot(aes(x = elevation, y = temp)) +
-  geom_point(aes(color = den_mean))+
-  scale_color_viridis_b()
-
-merged_df %>% 
-  ggplot(aes(x = den_mean, y = temp))+
-  geom_point(aes(color = elevation)) +
-  scale_color_viridis_c()+
-  theme_bw()+
-  labs(title = "Soil temp x Average densiometer",
-x = "Average densiometer",
-y = "Soil temperature")
+clean1 <- clean1 %>% 
+  mutate( elevation = round(elevation, digits = 0))
 
 
-
-# plotting function ####
-
-# first plot 
+# first plots #### 
 
 clean %>% 
   subset(qid == 'q898') %>%
@@ -233,28 +198,56 @@ unique_groups <- unique(clean$qid)
 all_plots <- map(unique_groups, ~ my_plot_func(.x, clean))
 
 
-# next steps : 
-# omit all of the bad data reads ####
-# omit: 696, 667, 71
-
-clean1 <- clean %>% 
-  dplyr::filter(!qid %in%  c("696", "q667", "q71")) 
-
-clean1 <- clean1 %>% 
-  mutate( elevation = round(elevation, digits = 0))
 
 
+# joining in the densiometer data ####
+den_to_merge <- den_df %>% 
+  mutate(q_t = paste0("q", q_t)) %>% 
+  rename(qid = q_t) %>% 
+  relocate(qid, den_mean) %>% 
+  select(1:2) %>% 
+  print(n = 10)
 
-# ggridge
-clean1 %>% 
-  mutate(elevation = as.factor(elevation)) %>% 
-  ggplot(aes(x = temp, y = elevation)) +
-  geom_density_ridges_gradient()+
-  scale_fill_viridis_c() 
-  # this will not fill, why? : not resolved yet (9/24)
+test_hobo <- clean1 %>% 
+  slice_sample(n = 1000) %>% 
+  print(n = 10)
+unique(test_hobo$qid)
 
-?ggridges
-# collect annual averages by elevation and plot those points 
+test_hobo %>% 
+  left_join(den_to_merge, by = 'qid', relationship = "many-to-many") %>% 
+  ggplot(aes(x = elevation, y = temp))+
+  geom_point(aes(color = den_mean))+
+  scale_color_viridis_c()
+
+# for real now
+
+merged_df <- clean1 %>% 
+  left_join(den_to_merge, by = 'qid', relationship = "many-to-many") 
+
+merged_df %>% 
+  ggplot(aes(x = elevation, y = temp)) +
+  geom_point(aes(color = den_mean))+
+  scale_color_viridis_b()
+
+merged_df %>% 
+  ggplot(aes(x = den_mean, y = temp))+
+  geom_point(aes(color = elevation)) +
+  scale_color_viridis_c()+
+  theme_bw()+
+  labs(title = "Soil temp x Average densiometer",
+x = "Average densiometer",
+y = "Soil temperature")
+
+# ridges ####
+
+merged_df
+
+
+
+
+
+
+
 
 # average plot ####
 avg_plot <- clean1 %>%
