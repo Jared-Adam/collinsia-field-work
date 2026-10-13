@@ -46,5 +46,39 @@ merged_df %>%
   theme_bw()+
   labs(title = "Soil temp x Average densiometer",
 x = "Average densiometer",
-y = "Soil temperature")
+y = "Soil temperature (C)")
 
+merged_df %>% 
+  ggplot(aes(x = elevation, y = den_mean)) +
+  geom_point()+
+  geom_smooth(method = 'gam',
+formula = y~s(x, k=4))
+
+merged_df %>%
+  group_by(qid, elevation) %>% 
+  summarise(max = max(temp, na.rm = TRUE),
+min = min(temp, na.rm = TRUE),
+median = median(temp, na.rm = TRUE)) %>% 
+  pivot_longer(cols = -c(qid, elevation),
+names_to = "stat", 
+values_to = "value") %>%
+  ggplot(aes(x = elevation, y = value))+
+  geom_point(aes(shape = stat))+
+  geom_smooth(method = 'gam',
+formula = y~s(x, k=4))+
+  labs(title = "Max, Min, Med soil temperature x elevation",
+x = "Elevation (m)",
+y = "Soil temperature (C)")
+
+merged_df %>% 
+  group_by(qid, elevation) %>% 
+  summarise(mean = mean(temp)) %>% 
+  ggplot(aes(x = elevation, y = mean))+
+  geom_point()+
+  geom_smooth(method = 'gam',
+formula = y~s(x, k=4))+
+  labs(
+    title = "Average soil temperature x elevation",
+    x = "Elevation (m)",
+    y = "Average soil temperature (C)"
+  )
