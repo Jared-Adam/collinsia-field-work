@@ -55,17 +55,18 @@ merged_df %>%
 formula = y~s(x, k=4))
 
 merged_df %>%
-  group_by(qid, elevation) %>% 
+  group_by(qid, elevation,date) %>% 
   summarise(max = max(temp, na.rm = TRUE),
 min = min(temp, na.rm = TRUE),
 median = median(temp, na.rm = TRUE)) %>% 
-  pivot_longer(cols = -c(qid, elevation),
+  pivot_longer(cols = -c(qid, elevation,date),
 names_to = "stat", 
 values_to = "value") %>%
   ggplot(aes(x = elevation, y = value))+
-  geom_point(aes(shape = stat))+
+  geom_point()+
   geom_smooth(method = 'gam',
 formula = y~s(x, k=4))+
+  facet_wrap(~stat)+
   labs(title = "Max, Min, Med soil temperature x elevation",
 x = "Elevation (m)",
 y = "Soil temperature (C)")
