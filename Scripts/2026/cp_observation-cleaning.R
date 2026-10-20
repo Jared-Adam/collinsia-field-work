@@ -68,20 +68,75 @@ debug <- cp %>%
     delim = ",", 
     names = c("EFN_sc_2", "EFN_sc_1"),
     too_few = "debug"
-  ) %>% 
+  ) 
+
+test_ok_df <- debug %>% 
   filter(test_ok == TRUE) # removing the confusing rows for now
+
 
 # 10/6/2026:
   # these do not work becuase the score column is erroneous 
   # ct has a value >0 but the score is incorrect. These must be found in the data sheets
 
-look <- debug %>% filter(!test_ok) %>% 
+test_false_df <- debug %>% filter(!test_ok) %>% 
   relocate(EFN.ct, EFN.score, test) %>% 
   print(n = Inf)
 
+# solution: I have a test_ok column that I will use to parce the case_when
+  # I still need to subset and then merge after the corrections have been made
+
+colnames(test_false_df)
+false_clean_df <- test_false_df %>% 
+  mutate(EFN.score = case_when(test_ok == FALSE & Qdrat.ID == 683 & Tag == 28 ~ 1,
+                              test_ok == FALSE & Qdrat.ID == 76 & Tag == 132 ~ 1,
+                              test_ok == FALSE & Qdrat.ID == 76 & Tag == 135 ~ 1,
+                              test_ok == FALSE & Qdrat.ID == 76 & Tag == 123 ~ 1,
+                              test_ok == FALSE & Qdrat.ID == 691 & Tag == 11 ~ 1,
+                              test_ok == FALSE & Qdrat.ID == 691 & Tag == 2 ~ 1,
+                              test_ok == FALSE & Qdrat.ID == 619 & Tag == 9 ~ 2,
+                              test_ok == FALSE & Qdrat.ID == 619 & Tag == 1 ~ 2,
+                              test_ok == FALSE & Qdrat.ID == 650 & Tag == 10 ~ 1,
+                              test_ok == FALSE & Qdrat.ID == 883 & Tag == 234 ~ 1,
+  .default = as.numeric(EFN.score))) %>%
+  mutate(EFN.ct = case_when(test_ok == FALSE & Qdrat.ID == 76 & Tag == 132 ~ 2,
+                            test_ok == FALSE & Qdrat.ID == 76 & Tag == 135 ~ 2,
+                            test_ok == FALSE & Qdrat.ID == 76 & Tag == 123 ~ 2,
+                            test_ok == FALSE & Qdrat.ID == 691 & Tag == 11 ~ 12,
+                          .default = as.numeric(EFN.ct))
+                        ) %>% 
+  select(-c(3,22,23,24,25,26)) %>% # need to remove the old columns from when I ran delim earlier
+  mutate(test =
+           case_when(
+             EFN.score == "1" ~ paste0("0", ",", EFN.ct),
+             EFN.score == "2" ~ paste0(EFN.ct, ",", "0"),
+             EFN.ct == "0" ~ paste0("0", ",", "0")
+           )
+  ) %>% 
+  separate_wider_delim(
+    test, 
+    delim = ",", 
+    names = c("EFN_sc_2", "EFN_sc_1"),
+    too_few = "debug"
+  ) %>% 
+  print(n = Inf)
+
+
+# joining the old and new dfs
+
+false_clean_df
+ready <- test_ok_df %>% 
+  mutate_at(18:19, as.numeric)
+
+joined_df <- full_join(false_clean_df, ready)
+
 
 # now getting rid of the NAs as they are not pertinent to EFNs
-next_df <- debug
+next_df <- joined_df
+
+
+
+
+# does this need to be remedied, or can NAs stay out?
 
 ###
 ##
@@ -164,11 +219,16 @@ labeled_df <- again_df %>%
   relocate(Date, loc, band, el, qid, rep) %>% 
   select(-7)
 
+
+
+
+
+# 10/20/2026: I need to reproduce this, and I am not sure how. 
 ###
 ##
 # 
 # This is not done! There are 6 instances of missing plots, come back to this 
-# ALSO opne instance of a messed up IR
+# ALSO one instance of a messed up IR
 # 
 ##
 ###
@@ -185,6 +245,32 @@ labeled_df <- again_df %>%
 #  6 910   910      NA  0     0      3.05  0       0 
 
 
+
+
+
+cleaned_df <- labeled_df %>%
+  mutate(d6_splitter = case_when(
+    D6_c.p == "0" ~ paste0("0",",",D6_c.p),
+    .default = D6_c.p
+  )) %>% 
+  separate_wider_delim(
+    cols = d6_splitter, 
+    delim = ",", 
+    names = c("D6_ct", "D6_p"),
+    too_few = "debug"
+  ) %>% 
+  mutate(d7_splitter = case_when(
+    D7_c.p == "0" ~ paste0("0", ",", D7_c.p),
+    .default = D7_c.p
+  )) %>% 
+  separate_wider_delim(
+    d7_splitter, 
+    delim = ",", 
+    names = c("D7_ct", "D7_p"),
+    too_few = "debug"
+  ) %>% 
+  relocate(Date, loc, band, el, qid, rep, Tag, D1_p, D2_p, D3_p, D6_p, D7_p) %>% 
+  mutate_at(8:12, as.numeric)
   
 # extract the max damage from each plant 
 cleaned_df %>% # quick vis with the wide df, switching to long

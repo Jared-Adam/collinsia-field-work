@@ -4,7 +4,7 @@ library(ggridges)
 
 # DFs ####
 labeled_df
-
+cleaned_df
 
 # damage vis ####
 
