@@ -218,6 +218,9 @@ labeled_df <- next_df %>%
 
 
 # 10/20/2026: I need to reproduce this, and I am not sure how. 
+cleaned_df %>% 
+  filter(is.na(el))
+
 ###
 ##
 # 
@@ -325,3 +328,14 @@ formula = y~s(x, k=4))+
 y = "Mean percent damage",
 x = "Elevation (m)")+
   theme_bw()
+
+# Mortality cleaning ####
+
+cleaned_df %>% 
+  select(1:8) %>% 
+  mutate(binary = case_when(D1_p == "dead" ~ "0",
+.default = "1",
+is.na(D1_p) ~ "X"
+)) %>% 
+  filter(binary != "X") %>% 
+  print(n = 1000)
