@@ -70,19 +70,16 @@ debug <- cp %>%
     too_few = "debug"
   ) 
 
+# extract the TRUE
 test_ok_df <- debug %>% 
   filter(test_ok == TRUE) # removing the confusing rows for now
 
-
-# 10/6/2026:
-  # these do not work becuase the score column is erroneous 
-  # ct has a value >0 but the score is incorrect. These must be found in the data sheets
-
+# extract the FALSE
 test_false_df <- debug %>% filter(!test_ok) %>% 
   relocate(EFN.ct, EFN.score, test) %>% 
   print(n = Inf)
 
-# solution: I have a test_ok column that I will use to parce the case_when
+# SOLUTION: I have a test_ok column that I will use to parce the case_when
   # I still need to subset and then merge after the corrections have been made
 
 colnames(test_false_df)
@@ -130,21 +127,18 @@ ready <- test_ok_df %>%
 joined_df <- full_join(false_clean_df, ready)
 
 
+
+# NOTE: 10/21/2026 
+  # I am not removing NAs anymore. I cannot recall why I removed them originally 
 # now getting rid of the NAs as they are not pertinent to EFNs
 next_df <- joined_df
-
-
-
-
-# does this need to be remedied, or can NAs stay out?
 
 ###
 ##
 #
-# DROPPING NA FOR NOW (10/6/2026)
-again_df <- next_df %>% 
-  mutate(across(where(is.character), ~na_if(., "na"))) %>% 
-  drop_na()
+# again_df <- next_df %>% 
+#   mutate(across(where(is.character), ~na_if(., "na"))) %>% 
+#   drop_na()
 #
 ##
 ###
@@ -153,7 +147,7 @@ again_df <- next_df %>%
 # add elevation ####
 # going to add a band column and assign that by qid and then add elev ~ band
 
-labeled_df <- again_df %>% 
+labeled_df <- next_df %>% 
   rename(id = Qdrat.ID) %>% 
   mutate(band = case_when(
     id == "813" | id == '838' | id == "794" | id == "71" | id == "893" | id == "891" | id == "914" | id == "945" | id == "898" ~ "1",
