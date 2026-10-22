@@ -218,8 +218,29 @@ labeled_df <- next_df %>%
 
 
 # 10/20/2026: I need to reproduce this, and I am not sure how. 
-cleaned_df %>% 
-  filter(is.na(el))
+missing_loc <- cleaned_df %>% 
+  filter(is.na(el)) 
+
+missing_loc %>% 
+  distinct(Date, loc, band, qid)
+
+#    Date    loc   band  qid      FIX 
+#    <chr>   <chr> <chr> <fct>
+#  1 7/21/26 69    69    69   IR B8 R2  
+#  2 7/21/26 IR    8     98   IR B8 R1
+#  3 7/21/26 IR    8     698  IR B8 R2
+#  4 6/30/26 457   457   457  MC B2
+#  5 6/9/26  457   457   457  MC B2
+#  6 5/5/26  654   654   654  I think this should be 652, but cannot confirm yet 
+#  7 5/27/26 IR    8     98   IR B8 R1
+#  8 5/27/26 IR    8     698  IR B8 R2
+#  9 5/7/26  62    62    62   IR B3 29?
+# 10 5/14/26 457   457   457  MC B2
+# 11 5/22/26 910   910   910  MC B1 914
+# 12 4/13/26 457   457   457  MC B2
+# 13 7/15/26 668   668   668  IR B7 899?
+
+
 
 ###
 ##
@@ -338,4 +359,9 @@ cleaned_df %>%
 is.na(D1_p) ~ "X"
 )) %>% 
   filter(binary != "X") %>% 
-  print(n = 1000)
+  print(n = 100)
+
+# fill in the missing rows so we have 15 plants per row still
+  # eg proportion alive at each date 
+  # can also plot this by phenological stage 
+  # veg (1) flower (2) fruit (3) dead (0)
