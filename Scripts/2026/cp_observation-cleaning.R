@@ -129,8 +129,8 @@ joined_df <- full_join(false_clean_df, ready)
 
 
 # NOTE: 10/21/2026 
-  # I am not removing NAs anymore. I cannot recall why I removed them originally 
-# now getting rid of the NAs as they are not pertinent to EFNs
+  # I am NOT removing NAs anymore. I cannot recall why I removed them originally 
+# OLD: now getting rid of the NAs as they are not pertinent to EFNs
 next_df <- joined_df
 
 ###
@@ -213,16 +213,64 @@ labeled_df <- next_df %>%
   relocate(Date, loc, band, el, qid, rep) %>% 
   select(-7)
 
-
-
-
+label_no_na <- labeled_df %>% 
+  filter(!is.na(el))
 
 # 10/20/2026: I need to reproduce this, and I am not sure how. 
-missing_loc <- cleaned_df %>% 
+missing_loc <- labeled_df %>% 
   filter(is.na(el)) 
 
 missing_loc %>% 
   distinct(Date, loc, band, qid)
+
+repaired_loc <- missing_loc %>% 
+  mutate(loc = case_when(loc == '69' ~ "IR",
+loc == '457' ~ "MC",
+loc == '62' ~ "IR",
+loc == '910' ~ "MC", 
+loc == '668' ~ "IR",
+loc == '654' ~ "IR",
+.default = loc)) %>% 
+  mutate(qid = case_when(loc == 'IR' & qid == '69' ~ '697',
+loc == 'IR' & qid == '654' ~ '652',
+loc == 'IR' & qid == '62' ~ '29',
+loc == 'MC' & qid == '910' ~ '914',
+loc == 'IR' & qid == '668' ~ '899',
+.default = qid)) %>% 
+  mutate(band = case_when(loc == 'IR' & qid == '697' ~ '8',
+loc == 'MC' & qid == '457' ~ '2',
+loc == 'IR' & qid == '652' ~ '6',
+loc == 'IR' & qid == '29' ~ '3',
+loc == 'MC' & qid == '914' ~ '1',
+loc == 'IR' & qid == '899' ~ '7',
+.default = band)) %>% 
+  mutate(rep = case_when(loc == 'IR' & qid == '697' ~ '2',
+loc == 'IR' & qid == '98' ~ '1',
+loc == 'IR' & qid == '698' ~ '2',
+.default = rep)) %>%
+  mutate(el = case_when(band == '1' & loc == 'MC' ~ 5400,
+                        band == '2'& loc == 'MC' ~6150,
+                        band == '3' & loc == 'IR' ~ 6300,
+                        band == '6' & loc == 'IR' ~ 7500, 
+                        band == '7' & loc == 'IR' ~ 8120,
+                        band == '8' & loc == 'IR' & rep == '1' ~ 8120,
+                        band == '8' & loc == 'IR' & rep == '2' ~ 8300,
+                      .default = el)) %>% 
+  distinct(Date, loc, band, qid, rep,el)
+
+  # check for nas before saving object
+full_join(repaired_loc, label_no_na) %>% 
+  filter(is.na(el))
+
+location_joined_df <- full_join(repaired_loc, label_no_na)
+
+
+
+
+
+
+
+
 
 #    Date    loc   band  qid      FIX 
 #    <chr>   <chr> <chr> <fct>
@@ -231,7 +279,7 @@ missing_loc %>%
 #  3 7/21/26 IR    8     698  IR B8 R2
 #  4 6/30/26 457   457   457  MC B2
 #  5 6/9/26  457   457   457  MC B2
-#  6 5/5/26  654   654   654  I think this should be 652, but cannot confirm yet 
+#  6 5/5/26  654   654   654  I think this should be 652 IR B6
 #  7 5/27/26 IR    8     98   IR B8 R1
 #  8 5/27/26 IR    8     698  IR B8 R2
 #  9 5/7/26  62    62    62   IR B3 29?
