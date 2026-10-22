@@ -213,16 +213,18 @@ labeled_df <- next_df %>%
   relocate(Date, loc, band, el, qid, rep) %>% 
   select(-7)
 
+# df for the correct elevation
 label_no_na <- labeled_df %>% 
   filter(!is.na(el))
 
-# 10/20/2026: I need to reproduce this, and I am not sure how. 
+# df for errors in elevation 
 missing_loc <- labeled_df %>% 
   filter(is.na(el)) 
 
 missing_loc %>% 
   distinct(Date, loc, band, qid)
 
+# repairing the errors in elevation. Most of this is due to incorrect quadrat labels 
 repaired_loc <- missing_loc %>% 
   mutate(loc = case_when(loc == '69' ~ "IR",
 loc == '457' ~ "MC",
@@ -258,62 +260,15 @@ loc == 'IR' & qid == '698' ~ '2',
                       .default = el)) %>% 
   distinct(Date, loc, band, qid, rep,el)
 
-  # check for nas before saving object
+# check for nas before saving object
 full_join(repaired_loc, label_no_na) %>% 
   filter(is.na(el))
 
+# repaired df
 location_joined_df <- full_join(repaired_loc, label_no_na)
 
 
-
-
-
-
-
-
-
-#    Date    loc   band  qid      FIX 
-#    <chr>   <chr> <chr> <fct>
-#  1 7/21/26 69    69    69   IR B8 R2  
-#  2 7/21/26 IR    8     98   IR B8 R1
-#  3 7/21/26 IR    8     698  IR B8 R2
-#  4 6/30/26 457   457   457  MC B2
-#  5 6/9/26  457   457   457  MC B2
-#  6 5/5/26  654   654   654  I think this should be 652 IR B6
-#  7 5/27/26 IR    8     98   IR B8 R1
-#  8 5/27/26 IR    8     698  IR B8 R2
-#  9 5/7/26  62    62    62   IR B3 29?
-# 10 5/14/26 457   457   457  MC B2
-# 11 5/22/26 910   910   910  MC B1 914
-# 12 4/13/26 457   457   457  MC B2
-# 13 7/15/26 668   668   668  IR B7 899?
-
-
-
-###
-##
-# 
-# This is not done! There are 6 instances of missing plots, come back to this 
-# ALSO one instance of a messed up IR
-# 
-##
-###
-
-# A tibble: 36 × 8
-# Groups:   loc, band [33]
-#    loc   band     el   D1_p   D2_p  D3_p    D6_p    D7_p
-#    <chr> <chr> <dbl>  <dbl>  <dbl> <dbl>   <dbl>   <dbl>
-#  1 457   457      NA 17.8   0.0600 0.371 0       0.135  
-#  2 62    62       NA  3.80  3.49   4.01  0.455   0      
-#  3 654   654      NA  0     0      0.633 0       0      
-#  4 668   668      NA  5.63  0      1.78  0       0      
-#  5 69    69       NA  0     0      0     0       0      
-#  6 910   910      NA  0     0      3.05  0       0 
-
-
-
-
-
+# splitting the mines
 cleaned_df <- labeled_df %>%
   mutate(d6_splitter = case_when(
     D6_c.p == "0" ~ paste0("0",",",D6_c.p),
