@@ -269,7 +269,7 @@ location_joined_df <- full_join(repaired_loc, label_no_na)
 
 
 # splitting the mines
-cleaned_df <- labeled_df %>%
+cleaned_df <- location_joined_df %>%
   mutate(d6_splitter = case_when(
     D6_c.p == "0" ~ paste0("0",",",D6_c.p),
     .default = D6_c.p
@@ -356,13 +356,50 @@ x = "Elevation (m)")+
 # Mortality cleaning ####
 
 cleaned_df %>% 
-  select(1:8) %>% 
-  mutate(binary = case_when(D1_p == "dead" ~ "0",
-.default = "1",
-is.na(D1_p) ~ "X"
-)) %>% 
-  filter(binary != "X") %>% 
+  arrange(Date, loc, band, el) %>% 
   print(n = 100)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+df_test <- tibble(
+  plant_id = c(1, 1, 1, 1, 2, 3, 3, 3, 3),
+  week     = c(1, 2, 3, 4, 1, 1, 2, 3, 4),
+  status   = c(1, 1, 1, 1, 0, 1, 1, 1, 1)
+) %>% 
+  print(n = Inf)
+
+df_test %>%
+  complete(plant_id, week = full_seq(week, 1)) %>%
+  arrange(plant_id, week) %>%
+  group_by(plant_id) %>%
+  fill(status, .direction = "down") %>%
+  ungroup()
+
+df_complete
+
+
+
+  
+#   select(1:8) %>% 
+#   mutate(binary = case_when(D1_p == "dead" ~ "0",
+# .default = "1",
+# is.na(D1_p) ~ "X"
+# )) %>% 
+#   filter(binary != "X") %>% 
+#   print(n = 100)
 
 # fill in the missing rows so we have 15 plants per row still
   # eg proportion alive at each date 
