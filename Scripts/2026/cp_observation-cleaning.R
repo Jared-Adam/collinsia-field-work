@@ -257,8 +257,9 @@ loc == 'IR' & qid == '698' ~ '2',
                         band == '7' & loc == 'IR' ~ 8120,
                         band == '8' & loc == 'IR' & rep == '1' ~ 8120,
                         band == '8' & loc == 'IR' & rep == '2' ~ 8300,
-                      .default = el)) %>% 
-  distinct(Date, loc, band, qid, rep,el)
+                      .default = el)) %>%
+  mutate(el = as.numeric(el)) %>% 
+  mutate(el = el*0.3) 
 
 # check for nas before saving object
 full_join(repaired_loc, label_no_na) %>% 
@@ -355,12 +356,53 @@ x = "Elevation (m)")+
 
 # Mortality cleaning ####
 
-cleaned_df %>% 
+# 10/23/2026: 
+  # This is not done or working
+  # my og code does create for complete and fill.
+  # TODO: create a df with mc and 416
+    # Then, attempt the valid qids and plant map ideas with the if statement. 
+
+mc_test <- cleaned_df %>% 
   arrange(Date, loc, band, el) %>% 
-  print(n = 100)
+  filter(loc == "MC" & qid == '416') 
 
 
 
+valid_qids <- mc_test %>%
+  #slice(1:126) %>% 
+  group_by(loc, qid) %>%
+  summarise(max_plants = n_distinct(Tag), .groups = "drop") %>%
+  filter(max_plants >= 15) %>%
+  pull(qid)
+
+# Step 2: Create your master plant map for mapping row_id to plant_id
+plant_map <- mc_test %>% 
+  mutate(row_id = row_number(), .by = c(Date, qid)) %>% 
+  relocate(row_id) %>% 
+  group_by(Date, qid) %>% 
+  complete(row_id = 1:15) %>% 
+  ungroup() %>% 
+  distinct(row_id, Tag)
+
+
+# broken ... need to revisit
+mc_test %>% 
+  group_by(loc, qid) %>% 
+  group_modify(function(sub_df, key){
+    # Check if this group's qid belongs to the 15-plant set
+    if (unique(key$qid) %in% valid_qids) {
+      # For 15-plant groups, safely complete using your plant template map
+      complete(sub_df, plant_map)
+    } else {
+      # For smaller groups, skip completion entirely to retain natural NAs
+      sub_df 
+    }
+  }) %>% 
+  fill(loc, band, el, rep,  .direction = "down") %>% 
+  ungroup() %>% 
+  print( n = Inf)
+
+d
 
 
 
