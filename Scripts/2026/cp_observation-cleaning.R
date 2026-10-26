@@ -366,7 +366,84 @@ mc_test <- cleaned_df %>%
   arrange(Date, loc, band, el) %>% 
   filter(loc == "MC" & qid == '416') 
 
+# expand trial 10/26: did not work 
 
+# mc_test %>% 
+#   group_by(Date, loc, band, el, qid, rep) %>% 
+#   expand(Tag) %>%
+#   ungroup() %>% 
+#   mutate(row_id = row_number(), .by = c(Date, qid)) %>% 
+#   relocate(row_id) %>% 
+#   group_by(Date, qid) %>% 
+#   complete(row_id = 1:15) %>% 
+#   ungroup() %>%  
+#   print(n = Inf)
+
+
+# complete and fill 10/26: Worked 
+one <- mc_test %>% 
+  mutate(row_id = row_number(), .by = c(Date, qid)) %>% 
+  relocate(row_id) %>% 
+  group_by(Date, qid) %>% 
+  complete(row_id = 1:15) %>% 
+  ungroup() 
+
+# on 6/30, 184 exists, but I think it should be 484. Going to change that
+two <- one %>%  
+  group_by(Date, qid) %>% 
+  fill(loc, band, el, rep, .direction = 'down') %>% 
+  ungroup()
+two <- two %>% 
+  mutate(Tag = case_when(Date == "6/30/26" & Tag == '184' ~ "484",
+.default = Tag)) 
+two %>% 
+  print(n = Inf)
+
+# completing all rows
+test_on_two <- two %>% 
+  select(-row_id) %>% 
+  #select(1:7) %>% 
+  # group_by(Date,qid, el, band, rep, loc) %>% 
+  complete(nesting(Date, loc, band, rep, el, qid),Tag) %>% 
+  distinct() %>% 
+  print(n = Inf)
+
+# completing a binary 
+two %>% 
+  select(-row_id) %>% 
+  select(1:8) %>% 
+  mutate(binary = case_when(D1_p == "dead" ~ "0",
+.default = "1",
+is.na(D1_p) ~ NA
+)) %>%
+  select(-D1_p) %>% 
+  complete(nesting(Date, loc, band, rep, el, qid),Tag) %>% 
+  distinct() %>% 
+  print(n = Inf)
+  
+  
+  #filter(binary != "X") 
+
+
+
+
+
+
+
+
+# 10/26/2026: Nothing below is in the final, keeping for now 
+# NO
+two %>% 
+  mutate(Tag = as.numeric(Tag)) %>% 
+  # complete(Tag) %>% 
+  group_by(Date, qid) %>% 
+  mutate(has_match = any(!is.na(Tag))) %>% 
+  fill(Tag, .direction = "downup") %>% 
+  mutate(Tag = if_else(has_match, Tag, NA_real_)) %>% 
+  ungroup() %>% 
+  relocate(Date, qid, row_id, loc, band, el, rep, Tag) %>% 
+  arrange(Date, row_id) %>% 
+  print(n = Inf)
 
 valid_qids <- mc_test %>%
   #slice(1:126) %>% 
