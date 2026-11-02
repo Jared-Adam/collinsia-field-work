@@ -355,9 +355,22 @@ x = "Elevation (m)")+
   theme_bw()
 
 # Mortality cleaning ####
+# want create a master df with the correct qid and tag id so I can ref in code later for repairs
+
+cleaned_df %>% 
+  mutate(Date = as.Date(Date, format = "%m/%d/%Y")) %>% 
+  group_by(band, qid) %>% 
+  filter(Date == min(Date)) %>% 
+  slice(1) %>% 
+  ungroup() %>% 
+  arrange(loc, band) %>% 
+  print(n = Inf)
+
+
+
 
 # 10/23/2026: 
-  # This is not done or working
+  # This is not done 
   # my og code does create for complete and fill.
   # TODO: create a df with mc and 416
     # Then, attempt the valid qids and plant map ideas with the if statement. 
@@ -421,8 +434,62 @@ is.na(D1_p) ~ NA
   distinct() %>% 
   print(n = Inf)
   
+# all of mica creek at once
+# need to locate which stage makes repair easiest
+# I might have to do this one loc and band at a time 
+
+mc_band_one <- cleaned_df %>% 
+  filter(loc == 'MC'& band == '1')
+
+mc_b1_row <- mc_band_one %>% 
+  mutate(row_id = row_number(), .by = c(Date, qid)) %>% 
+  relocate(row_id) %>% 
+  group_by(Date, qid) %>% 
+  complete(row_id = 1:15) %>% 
+  print(n = Inf)
+
+mc_b1_down <- mc_b1_row%>% 
+  fill(loc, band, el, rep, .direction = 'down') %>% 
+  ungroup() %>%
+  print(n = Inf)
+
   
-  #filter(binary != "X") 
+mc_b1_down %>% 
+  select(-row_id) %>% 
+  group_by(Date,qid) %>%
+  distinct(Tag) %>% 
+  print(n = Inf)
+  
+
+  
+
+
+  # complete(nesting(Date, loc, band, rep, el, qid), Tag) %>% 
+  # distinct() %>% 
+  # print(n = Inf)
+
+
+
+
+
+
+
+
+
+
+
+
+hold
+
+
+
+
+
+
+
+
+
+
 
 
 
