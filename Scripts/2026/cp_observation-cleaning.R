@@ -357,16 +357,22 @@ x = "Elevation (m)")+
 # Mortality cleaning ####
 # want create a master df with the correct qid and tag id so I can ref in code later for repairs
 
-cleaned_df %>% 
+inspect_df <- cleaned_df %>% 
   mutate(Date = as.Date(Date, format = "%m/%d/%Y")) %>% 
-  group_by(band, qid) %>% 
+  group_by(band, qid, Tag) %>% 
   filter(Date == min(Date)) %>% 
   slice(1) %>% 
   ungroup() %>% 
   arrange(loc, band) %>% 
-  print(n = Inf)
+  select(1:8) %>% 
+  mutate(row_id = row_number(), .by = c(Date, qid)) %>% 
+  relocate(row_id) %>% 
+  group_by(Date, qid) %>% 
+  complete(row_id = 1:15) %>% 
+  ungroup() 
 
 
+write.csv(inspect_df, "master_list_df.csv", row.names = FALSE)
 
 
 # 10/23/2026: 
