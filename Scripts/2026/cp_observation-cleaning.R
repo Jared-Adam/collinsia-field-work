@@ -355,6 +355,111 @@ x = "Elevation (m)")+
   theme_bw()
 
 # Mortality cleaning ####
+
+# See note on 11/4 for rationale
+  # Repairing tags that are broken one location at a time 
+
+step1_tagRepair <- cleaned_df %>% 
+  mutate(Date = case_when(Date == "4/20/26" & qid == 71 ~ "4/10/26", 
+.default = Date)) %>% 
+  mutate(Date = str_replace(Date, "/26$", "/2026")) %>% 
+  # filter(qid == 71) %>% 
+  # arrange(Date) %>% 
+  mutate(Date = as.Date(Date, format = "%m/%d/%Y")) %>% 
+  arrange(Date) %>% 
+  select(1:7)
+
+# Now, I want to get the first instance of each quadrat and see if I can cross reference those tags 
+
+step2_Timing <- step1_tagRepair %>% 
+  arrange(Date) %>% 
+  group_by(loc, qid, band) %>% 
+  mutate(timing = dense_rank(Date)) %>% 
+  relocate(timing) 
+
+IR_first_time <- 
+
+
+
+###
+##
+#
+#. IR
+
+# Isolate the unique tags based on qid
+IR_tagRepair <- step1_tagRepair %>% 
+  filter(loc == "IR") 
+
+IR_List <- unique(IR_tagRepair$qid)
+
+IR_tagRepair %>% 
+  filter(qid %in% IR_List) %>% 
+  group_by(qid) %>% 
+  summarise(tags = list(unique(Tag))) %>% 
+  filter(lengths(tags) > 15) %>% 
+  unnest(tags) %>%
+  filter(qid == "105") %>% 
+  arrange(tags) %>% 
+  print(n = Inf)
+
+# 
+
+
+
+stop
+###
+##
+#
+#. HR
+
+HR_tagRepair <- step1_tagRepair %>% 
+  filter(loc == "HR")
+
+HR_List <- unique(HR_tagRepair$qid)
+
+HR_tagRepair %>% 
+  filter(qid %in% HR_List) %>% 
+  group_by(qid) %>% 
+  summarise(tags = list(unique(Tag))) %>% 
+  filter(lengths(tags) > 15) 
+# %>% 
+#   unnest(tags) %>%
+#   filter(qid == "105") %>% 
+#   arrange(tags) %>% 
+#   print(n = Inf)
+
+
+stop
+###
+##
+#
+#.  MC
+
+
+MC_tagRepair <- step1_tagRepair %>% 
+  filter(loc == "MC")
+
+MC_List <- unique(MC_tagRepair$qid)
+
+MC_tagRepair %>% 
+  filter(qid %in% MC_List) %>% 
+  group_by(qid) %>% 
+  summarise(tags = list(unique(Tag))) %>% 
+  filter(lengths(tags) > 15)
+
+
+
+
+stop
+
+
+# 11/4/2026: All of this code was in an effort to coalece the missing tag numbers in 
+  # However, there are potentially greater issues with the tag ids than realized
+  # For example: Mislabled tags are persistent 
+  # In the ABOVE code: 
+    # I am starting fresh with first looking to correct any incorrect tags
+      # Methodology, unclear 
+
 # Through some cleaning, I discovered some date issues
   # I cannot identify where the error occured, but I know the issue
   # HR q 71 has 5 tags with a 4/20 date. This should be 4/10
