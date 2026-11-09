@@ -369,6 +369,8 @@ step1_tagRepair <- cleaned_df %>%
   arrange(Date) %>% 
   select(1:7)
 
+
+# 11/9/26: NOOO. This will not work. Start at isolated locations 
 # Now, I want to get the first instance of each quadrat and see if I can cross reference those tags 
 
 step2_Timing <- step1_tagRepair %>% 
@@ -392,17 +394,34 @@ IR_tagRepair <- step1_tagRepair %>%
 
 IR_List <- unique(IR_tagRepair$qid)
 
+
+# PLAN: 
+
 IR_tagRepair %>% 
   filter(qid %in% IR_List) %>% 
   group_by(qid) %>% 
   summarise(tags = list(unique(Tag))) %>% 
   filter(lengths(tags) > 15) %>% 
   unnest(tags) %>%
-  filter(qid == "105") %>% 
-  arrange(tags) %>% 
-  print(n = Inf)
+  #filter(qid == "105") %>% 
+  arrange(qid) %>% 
+  write.csv("IG_broken_tags.csv", row.names = FALSE)
 
-# 
+# REPAIRS
+IR_tagRepair %>% 
+  mutate(Tag = case_when(loc == "IR" & qid == "105" & Tag == "71" ~ "79",
+    loc == "IR" & qid == "105" & Tag == "689" ~ "698",
+    loc == "IR" & qid == "29" & Tag == "51" ~ "15",
+    .default = Tag)) %>% 
+  filter(qid %in% IR_List) %>% 
+  group_by(qid) %>% 
+  summarise(tags = list(unique(Tag))) %>% 
+  filter(lengths(tags) > 15) 
+
+
+
+
+
 
 
 
