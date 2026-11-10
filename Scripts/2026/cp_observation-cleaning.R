@@ -370,20 +370,23 @@ step1_tagRepair <- cleaned_df %>%
   select(1:7)
 
 
+
+
+
 # 11/9/26: NOOO. This will not work. Start at isolated locations 
 # Now, I want to get the first instance of each quadrat and see if I can cross reference those tags 
 
-step2_Timing <- step1_tagRepair %>% 
-  arrange(Date) %>% 
-  group_by(loc, qid, band) %>% 
-  mutate(timing = dense_rank(Date)) %>% 
-  relocate(timing) 
+# step2_Timing <- step1_tagRepair %>% 
+#   arrange(Date) %>% 
+#   group_by(loc, qid, band) %>% 
+#   mutate(timing = dense_rank(Date)) %>% 
+#   relocate(timing) 
 
-IR_first_time <- 
+# IR_first_time <- 
 
 
 
-###
+# ###
 ##
 #
 #. IR
@@ -409,10 +412,26 @@ IR_tagRepair %>%
 
 # REPAIRS
 IR_tagRepair %>% 
-  mutate(Tag = case_when(loc == "IR" & qid == "105" & Tag == "71" ~ "79",
+  mutate(Tag = case_when(loc == "IR" & qid == "105" & Tag == "71" ~ "79",# IR
     loc == "IR" & qid == "105" & Tag == "689" ~ "698",
     loc == "IR" & qid == "29" & Tag == "51" ~ "15",
+    loc == "IR" & qid == "3" & Tag == "35" ~ "37",
+    loc == "IR" & qid == "302" & Tag == "273" ~ "278",
+    loc == "IR" & qid == "320" & Tag == "284" ~ "384",
+    loc == "IR" & qid == "36" & Tag == "807" ~ "897",
+    loc == "IR" & qid == "36" & Tag == "68" ~ "89",
+    loc == "IR" & qid == "433" & Tag == "29" ~ "62",
+    loc == "IR" & qid == "433" & Tag == "253" ~ "252",
+    loc == "IR" & qid == "433" & Tag == " " ~ "658",
+    loc == "IR" & qid == "620" & Tag == "892" ~ "268",
+    loc == "IR" & qid == "626" & Tag == "1" ~ "9",
+    loc == "IR" & qid == "652" & Tag == "19" ~ "49",
+    loc == "IR" & qid == "838" & Tag == "270" ~ "278",
+    loc == "IR" & qid == "899" & Tag == "14" ~ "24",
+    loc == "IR" & qid == "98" & Tag == "61" ~ "6",
+    loc == "IR" & qid == "989" & Tag == "71" ~ "7",
     .default = Tag)) %>% 
+  filter(Tag != "na") %>% # for  IR quadrat 78
   filter(qid %in% IR_List) %>% 
   group_by(qid) %>% 
   summarise(tags = list(unique(Tag))) %>% 
@@ -436,17 +455,41 @@ HR_tagRepair <- step1_tagRepair %>%
 
 HR_List <- unique(HR_tagRepair$qid)
 
+
 HR_tagRepair %>% 
+  mutate(Tag = case_when(loc == "HR" & qid == "6" & Tag == "6" ~ "9",  # HR
+    loc == "HR" & qid == "6" & Tag == "154" ~ "159",
+    loc == "HR" & qid == "639" & Tag == "565" ~ "556",
+    loc == "HR" & qid == "660" & Tag == "17" ~ "7",
+    loc == "HR" & qid == "660" & Tag == "24" ~ "27",
+    # loc == "HR" & qid == "660" & Date == "2026-6-24" & Tag == "41" ~ "11",
+    loc == "HR" & qid == "672" & Tag == "79" ~ "29",
+    loc == "HR" & qid == "672" & Tag == "33" ~ "23",
+    loc == "HR" & qid == "672" & Tag == "30" ~ "20",
+    loc == "HR" & qid == "683" & Tag == "29" ~ "24",
+    loc == "HR" & qid == "687" & Tag == "594" ~ "595",
+    loc == "HR" & qid == "71" & Tag == "809" ~ "869",
+    loc == "HR" & qid == "80" & Tag == "120" ~ "126",
+    loc == "HR" & qid == "80" & Tag == "104" ~ "164",
+    loc == "HR" & qid == "80" & Tag == "765" ~ "763",
+    loc == "HR" & qid == "891" & Tag == "777" ~ "977",
+    loc == "HR" & qid == "94" & Tag == "107" ~ "167",
+    loc == "HR" & qid == "96" & Tag == "108" ~ "168",
+    .default = Tag)) %>% 
+  filter(Tag != "574") %>% # 623 resolution
+  filter(Tag != "999") %>% # 660 resolution
+  mutate(filter_c = case_when(qid == "624" & Date == "2026-06-23" ~ "take", # fixing 624 issue
+    .default = "leave")) %>% 
+  filter(filter_c == "leave") %>% 
+  select(-8) %>% 
   filter(qid %in% HR_List) %>% 
   group_by(qid) %>% 
   summarise(tags = list(unique(Tag))) %>% 
   filter(lengths(tags) > 15) 
-# %>% 
 #   unnest(tags) %>%
-#   filter(qid == "105") %>% 
-#   arrange(tags) %>% 
-#   print(n = Inf)
-
+# #   filter(qid == "105") %>% 
+#   arrange(qid) %>% 
+#   write.csv("HR_broken_tags.csv", row.names = FALSE)
 
 stop
 ###
@@ -454,17 +497,79 @@ stop
 #
 #.  MC
 
+# extract 624 bc some are incorrect qid
+
+
+MC_broke_629 <- HR_tagRepair %>% 
+  filter(qid == "624") %>% 
+  mutate(filter_c = case_when(Date == "2026-06-23" ~ "take")) %>% 
+  filter(filter_c == "take") %>% 
+  mutate(qid = "629",
+    loc = "MC") %>% 
+  select(-8) %>% 
+  print()
 
 MC_tagRepair <- step1_tagRepair %>% 
   filter(loc == "MC")
 
 MC_List <- unique(MC_tagRepair$qid)
 
-MC_tagRepair %>% 
+MC_tagRep_bind <- 
+  rbind(MC_tagRepair, MC_broke_629)
+
+MC_tagRep_bind %>%  
+  mutate(Tag = case_when(loc == "MC" & qid == "13" & Tag == "220" ~ "230",
+    loc == "MC" & qid == "13" & Tag == "477" ~ "877",
+    loc == "MC" & qid == "17" & Tag == "692" ~ "290",
+    loc == "MC" & qid == "17" & Tag == "256" ~ "656",
+    loc == "MC" & qid == "218" & Tag == "210" ~ "201",
+    loc == "MC" & qid == "218" & Tag == "102" ~ "201",
+    loc == "MC" & qid == "258" & Tag == "258" ~ "251",
+    loc == "MC" & qid == "259" & Tag == "226" ~ "266",
+    loc == "MC" & qid == "259" & Tag == "203" ~ "293",
+    loc == "MC" & qid == "263" & Tag == "353" ~ "853",
+    loc == "MC" & qid == "285" & Tag == "557" ~ "257",
+    loc == "MC" & qid == "285" & Tag == "279" ~ "271",
+    loc == "MC" & qid == "267" & Tag == "476" ~ "953",
+    loc == "MC" & qid == "458" & Tag == "667" ~ "67",
+    loc == "MC" & qid == "458" & Tag == "460" ~ "400",
+    loc == "MC" & qid == "610" & Tag == "707" ~ "767",
+    loc == "MC" & qid == "611" & Tag == "638" ~ "689",
+    loc == "MC" & qid == "629" & Tag == "851" ~ "651",
+    loc == "MC" & qid == "629" & Tag == "299" ~ "662",
+    loc == "MC" & qid == "634" & Tag == "662" ~ "602",
+    loc == "MC" & qid == "730" & Tag == "356" ~ "357",
+    loc == "MC" & qid == "81" & Tag == "43" ~ "143",
+    loc == "MC" & qid == "81" & Tag == "106" ~ "166",
+    loc == "MC" & qid == "81" & Tag == "112" ~ "211",
+    loc == "MC" & qid == "81" & Tag == "233" ~ "235",
+    loc == "MC" & qid == "416" & Tag == "184" ~ "484",
+    .default = Tag)) %>% 
+  filter(!(Date == "2026-07-17" & Tag == "55")) %>% 
+  filter(!(Date == "2026-06-30" & Tag == "247")) %>% 
+  mutate(qid = case_when(
+    qid == "457" & Tag == "186" ~ "416",
+    qid == "457" & Tag == "416" ~ "416",
+    qid == "457" & Tag == "451" ~ "416",
+    qid == "457" & Tag == "455" ~ "416",
+    qid == "457" & Tag == "463" ~ "416",
+    qid == "457" & Tag == "469" ~ "416",
+    qid == "457" & Tag == "471" ~ "416",
+    qid == "457" & Tag == "478" ~ "416",
+    qid == "457" & Tag == "484" ~ "416",
+    qid == "457" & Tag == "600" ~ "416",
+    qid == "457" & Tag == "634" ~ "416",
+    qid == "457" & Tag == "661" ~ "416",
+    .default = qid
+  )) %>% 
   filter(qid %in% MC_List) %>% 
   group_by(qid) %>% 
   summarise(tags = list(unique(Tag))) %>% 
-  filter(lengths(tags) > 15)
+  filter(lengths(tags) > 15) 
+#   unnest(tags) %>%
+# #  filter(qid == "105") %>% 
+#   arrange(qid) %>% 
+# write.csv("MC_broken_tags.csv", row.names = FALSE)
 
 
 
