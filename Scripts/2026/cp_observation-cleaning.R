@@ -213,6 +213,12 @@ labeled_df <- next_df %>%
   relocate(Date, loc, band, el, qid, rep) %>% 
   select(-7)
 
+# 11/12/26
+# Add elevation by quadrat, not band
+# mutate(el = case_when())
+
+
+
 # df for the correct elevation
 label_no_na <- labeled_df %>% 
   filter(!is.na(el))
@@ -666,9 +672,6 @@ tag_revised_df %>%
   left_join(tag_revised_df, by = c('qid', 'Tag', 'Date', 'loc'))
 
 
-
-stop
-
 tags_complete <- tag_revised_df %>% 
   mutate(row_id = row_number(), .by = c(Date, qid)) %>% 
   relocate(row_id) %>% 
@@ -682,10 +685,16 @@ tags_complete <- tag_revised_df %>%
   group_by(loc, qid, Tag, rep, band, el) %>% 
   complete(Date) 
 
-tag_binary <- tags_complete %>%   
-  select(1:8) %>% 
-  mutate(binary = case_when(D1_p == "dead" ~ "0",
-.default = "1",
-is.na(D1_p) ~ NA
-))
+# BINARY broken because NA might mean alive
 
+# tag_binary <- tags_complete %>%   
+#   select(1:8) %>% 
+#   mutate(binary = case_when(D1_p == "dead" ~ "0",
+# .default = "1",
+# is.na(D1_p) ~ NA
+# ))
+
+tags_complete %>% 
+  filter()
+  ggplot(aes(x = el, y = D1_p))+
+  geom_point(aes(color = loc))
