@@ -421,14 +421,6 @@ IR_tagRepair %>%
   summarise(tags = list(unique(Tag))) %>% 
   filter(lengths(tags) > 15) 
 
-
-
-
-
-
-
-
-stop
 ###
 ##
 #
@@ -475,7 +467,6 @@ HR_tagRepair %>%
 #   arrange(qid) %>% 
 #   write.csv("HR_broken_tags.csv", row.names = FALSE)
 
-stop
 ###
 ##
 #
@@ -555,9 +546,17 @@ MC_tagRep_bind %>%
 #   arrange(qid) %>% 
 # write.csv("MC_broken_tags.csv", row.names = FALSE)
 
-# attempting the changes at the whole-df level now .
+# Implementing the changes at the whole-df level now :
+# 11/12/26
 
-cleaned_df  %>% 
+master_qid_list <- unique(cleaned_df$qid)
+
+
+tag_revised_df <- cleaned_df  %>% 
+  mutate(Date = case_when(Date == "4/20/26" & qid == 71 ~ "4/10/26", 
+.default = Date)) %>% 
+  mutate(Date = str_replace(Date, "/26$", "/2026")) %>% 
+  mutate(Date = as.Date(Date, format = "%m/%d/%Y")) %>% 
   mutate(Tag = case_when(loc == "IR" & qid == "105" & Tag == "71" ~ "79",# IR
     loc == "IR" & qid == "105" & Tag == "689" ~ "698",
     loc == "IR" & qid == "29" & Tag == "51" ~ "15",
@@ -599,11 +598,11 @@ cleaned_df  %>%
     .default = Tag)) %>% 
   filter(Tag != "574") %>% # 623 resolution
   filter(Tag != "999") %>% # 660 resolution
-  mutate(qid = case_when(qid == "624" & Date == "2026-06-23" ~ "629", # fixing 624 issue
+  mutate(qid = case_when(loc == "HR" & qid == "624" & Date == "2026-06-23" ~ "629", # fixing 624 issue
     .default = qid)) %>% 
-  mutate(loc = case_when(qid == '629' & Date == "2026-06-23" ~ "MC",
+  mutate(loc = case_when(loc == "HR" & qid == '629' & Date == "2026-06-23" ~ "MC",
     .default = loc)) %>% # fixing 624 issue
-mutate(Tag = case_when(loc == "MC" & qid == "13" & Tag == "220" ~ "230", # MC 
+  mutate(Tag = case_when(loc == "MC" & qid == "13" & Tag == "220" ~ "230", # MC 
     loc == "MC" & qid == "13" & Tag == "477" ~ "877",
     loc == "MC" & qid == "17" & Tag == "692" ~ "290",
     loc == "MC" & qid == "17" & Tag == "256" ~ "656",
@@ -649,368 +648,44 @@ mutate(Tag = case_when(loc == "MC" & qid == "13" & Tag == "220" ~ "230", # MC
   )) %>% 
   filter(!(loc == "MC" & Date == "2026-4-11" & qid == "457" & Tag == "467" & PH == "8")) %>% 
     filter(!(loc == "MC" & qid == "13" & Tag == "798" & PH == "62"))
+  # filter(qid %in% master_qid_list) %>% 
+  # group_by(qid) %>% 
+  # summarise(tags = list(unique(Tag))) %>% 
+  # filter(lengths(tags) > 15) 
+# %>% 
+#     unnest(tags) %>%
+#   arrange(qid) %>% 
+# write.csv("MASTER_broken_tags.csv", row.names = FALSE)
 
+# An attempt at expand with the new, hopefully error free, df
+# 11/12/26
 
-
-
-
-
-
-
-
+# Does not change anything 
+tag_revised_df %>% 
+  expand(nesting(qid, Tag, Date, loc)) %>% 
+  left_join(tag_revised_df, by = c('qid', 'Tag', 'Date', 'loc'))
 
 
 
 stop
 
-
-# 11/4/2026: All of this code was in an effort to coalece the missing tag numbers in 
-  # However, there are potentially greater issues with the tag ids than realized
-  # For example: Mislabled tags are persistent 
-  # In the ABOVE code: 
-    # I am starting fresh with first looking to correct any incorrect tags
-      # Methodology, unclear 
-
-# Through some cleaning, I discovered some date issues
-  # I cannot identify where the error occured, but I know the issue
-  # HR q 71 has 5 tags with a 4/20 date. This should be 4/10
-  # Will repair that 
-as_date_df <- cleaned_df %>% 
-  mutate(Date = case_when(Date == "4/20/26" & qid == 71 ~ "4/10/26", 
-.default = Date)) %>% 
-  mutate(Date = str_replace(Date, "/26$", "/2026")) %>% 
-  # filter(qid == 71) %>% 
-  # arrange(Date) %>% 
-  mutate(Date = as.Date(Date, format = "%m/%d/%Y")) %>% 
-  arrange(Date) %>% 
-  group_by(loc, qid, band) %>% 
-  mutate(timing = dense_rank(Date)) %>% 
-  relocate(timing) 
-
-as_date_df
-
-# filled df of all locs and such 
-filled_df <- as_date_df %>% 
+tags_complete <- tag_revised_df %>% 
+  mutate(row_id = row_number(), .by = c(Date, qid)) %>% 
+  relocate(row_id) %>% 
+  group_by(Date, qid) %>% 
+  complete(row_id = 1:15) %>% 
+  ungroup()%>%  
+  group_by(Date, qid) %>% 
+  fill(Tag, loc, band, el, rep, .direction = 'down') %>% 
   ungroup() %>% 
-  arrange(loc, band) %>% 
-  select(1:9) %>% 
-  mutate(row_id = row_number(), .by = c(Date, qid)) %>% 
-  relocate(row_id) %>% 
-  group_by(Date, qid, timing) %>% 
-  complete(row_id = 1:15) %>% 
-  ungroup() %>%  
-  group_by(Date, qid) %>% 
-  fill(loc, band, el, rep,timing, .direction = 'down') %>% 
-  ungroup() 
-
-write.csv(filled_df, "filled_df_ref.csv", row.names = FALSE)
-
-
-# master df with the first timing of each location and band
-  # these should be the most accurate tag ids
-  # complete the whole df based on these values 
-t1_master_df <- filled_df %>% 
-  group_by(qid) %>% 
-  filter(timing == min(timing)) 
-
-  
-write.csv(t1_master_df, "master_list_df.csv", row.names = FALSE)
-
-# master list test
-HR_master_test <- t1_master_df %>% 
-  filter(loc == "HR")
-HR_filled_test <- filled_df %>% 
-  filter(loc == "HR")
-
-# HR_filled_test %>% 
-#   mutate(Tag = coalesce())
-
-look <- HR_filled_test %>% 
-  complete(Tag = HR_master_test$Tag) %>% 
-  arrange(qid, timing, band, row_id)
-# %>%  
-#   count(row_id)
-
-target <- unique(look$qid)
-
-look %>% 
-  filter(qid %in% target) %>%
-  group_by(qid) %>%
-  summarise(tags = list(unique(Tag))) %>% 
-  filter(lengths(tags) > 15) %>% 
-  unnest(tags) %>%
-  filter(qid == "624") %>% 
-  arrange(tags) %>% 
-  print(n = Inf)
-
-
-
-stop
-
-
-
-
-
-# want create a master df with the correct qid and tag id so I can ref in code later for repairs
-
-# inspect_df <- cleaned_df %>% 
-#   mutate(Date = as.Date(Date, format = "%m/%d/%Y")) %>% 
-#   group_by(band, qid, Tag) %>% 
-#   filter(Date == min(Date)) %>% 
-#   slice(1) %>% 
-#   ungroup() %>% 
-#   arrange(loc, band) %>% 
-#   select(1:8) %>% 
-#   mutate(row_id = row_number(), .by = c(Date, qid)) %>% 
-#   relocate(row_id) %>% 
-#   group_by(Date, qid) %>% 
-#   complete(row_id = 1:15) %>% 
-#   ungroup() 
-
-
-# write.csv(inspect_df, "master_list_df.csv", row.names = FALSE)
-
-# inspect_df %>% 
-#   filter(band == 1) %>%  
-#   arrange(qid) %>% 
-#   print(n = Inf)
-
-# cleaned_df %>% 
-#   filter(qid == 71 | qid == 76) %>% 
-#   arrange(qid) %>% 
-#   print(n = Inf)
-
-# cleaned_df %>% 
-#   filter(qid == 71) %>% 
-#   filter(Date == "4/10/26" | Date == "4/20/26") %>% 
-#   print(n = Inf)
-
-
-
-
-
-
-
-
-# 10/23/2026: 
-  # This is not done 
-  # my og code does create for complete and fill.
-  # TODO: create a df with mc and 416
-    # Then, attempt the valid qids and plant map ideas with the if statement. 
-
-mc_test <- cleaned_df %>% 
-  arrange(Date, loc, band, el) %>% 
-  filter(loc == "MC" & qid == '416') 
-
-# expand trial 10/26: did not work 
-
-# mc_test %>% 
-#   group_by(Date, loc, band, el, qid, rep) %>% 
-#   expand(Tag) %>%
-#   ungroup() %>% 
-#   mutate(row_id = row_number(), .by = c(Date, qid)) %>% 
-#   relocate(row_id) %>% 
-#   group_by(Date, qid) %>% 
-#   complete(row_id = 1:15) %>% 
-#   ungroup() %>%  
-#   print(n = Inf)
-
-
-# complete and fill 10/26: Worked 
-one <- mc_test %>% 
-  mutate(row_id = row_number(), .by = c(Date, qid)) %>% 
-  relocate(row_id) %>% 
-  group_by(Date, qid) %>% 
-  complete(row_id = 1:15) %>% 
-  ungroup() 
-
-# on 6/30, 184 exists, but I think it should be 484. Going to change that
-two <- one %>%  
-  group_by(Date, qid) %>% 
-  fill(loc, band, el, rep, .direction = 'down') %>% 
-  ungroup()
-two <- two %>% 
-  mutate(Tag = case_when(Date == "6/30/26" & Tag == '184' ~ "484",
-.default = Tag)) 
-two %>% 
-  print(n = Inf)
-
-# completing all rows
-test_on_two <- two %>% 
   select(-row_id) %>% 
-  #select(1:7) %>% 
-  # group_by(Date,qid, el, band, rep, loc) %>% 
-  complete(nesting(Date, loc, band, rep, el, qid),Tag) %>% 
-  distinct() %>% 
-  print(n = Inf)
+  group_by(loc, qid, Tag, rep, band, el) %>% 
+  complete(Date) 
 
-# completing a binary 
-two %>% 
-  select(-row_id) %>% 
+tag_binary <- tags_complete %>%   
   select(1:8) %>% 
   mutate(binary = case_when(D1_p == "dead" ~ "0",
 .default = "1",
 is.na(D1_p) ~ NA
-)) %>%
-  select(-D1_p) %>% 
-  complete(nesting(Date, loc, band, rep, el, qid),Tag) %>% 
-  distinct() %>% 
-  print(n = Inf)
-  
-# all of mica creek at once
-# need to locate which stage makes repair easiest
-# I might have to do this one loc and band at a time 
+))
 
-mc_band_one <- cleaned_df %>% 
-  filter(loc == 'MC'& band == '1')
-
-mc_b1_row <- mc_band_one %>% 
-  mutate(row_id = row_number(), .by = c(Date, qid)) %>% 
-  relocate(row_id) %>% 
-  group_by(Date, qid) %>% 
-  complete(row_id = 1:15) %>% 
-  print(n = Inf)
-
-mc_b1_down <- mc_b1_row%>% 
-  fill(loc, band, el, rep, .direction = 'down') %>% 
-  ungroup() %>%
-  print(n = Inf)
-
-  
-mc_b1_down %>% 
-  select(-row_id) %>% 
-  group_by(Date,qid) %>%
-  distinct(Tag) %>% 
-  print(n = Inf)
-  
-
-  
-
-
-  # complete(nesting(Date, loc, band, rep, el, qid), Tag) %>% 
-  # distinct() %>% 
-  # print(n = Inf)
-
-
-
-
-
-
-
-
-
-
-
-
-hold
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-# 10/26/2026: Nothing below is in the final, keeping for now 
-# NO
-two %>% 
-  mutate(Tag = as.numeric(Tag)) %>% 
-  # complete(Tag) %>% 
-  group_by(Date, qid) %>% 
-  mutate(has_match = any(!is.na(Tag))) %>% 
-  fill(Tag, .direction = "downup") %>% 
-  mutate(Tag = if_else(has_match, Tag, NA_real_)) %>% 
-  ungroup() %>% 
-  relocate(Date, qid, row_id, loc, band, el, rep, Tag) %>% 
-  arrange(Date, row_id) %>% 
-  print(n = Inf)
-
-valid_qids <- mc_test %>%
-  #slice(1:126) %>% 
-  group_by(loc, qid) %>%
-  summarise(max_plants = n_distinct(Tag), .groups = "drop") %>%
-  filter(max_plants >= 15) %>%
-  pull(qid)
-
-# Step 2: Create your master plant map for mapping row_id to plant_id
-plant_map <- mc_test %>% 
-  mutate(row_id = row_number(), .by = c(Date, qid)) %>% 
-  relocate(row_id) %>% 
-  group_by(Date, qid) %>% 
-  complete(row_id = 1:15) %>% 
-  ungroup() %>% 
-  distinct(row_id, Tag)
-
-
-# broken ... need to revisit
-mc_test %>% 
-  group_by(loc, qid) %>% 
-  group_modify(function(sub_df, key){
-    # Check if this group's qid belongs to the 15-plant set
-    if (unique(key$qid) %in% valid_qids) {
-      # For 15-plant groups, safely complete using your plant template map
-      complete(sub_df, plant_map)
-    } else {
-      # For smaller groups, skip completion entirely to retain natural NAs
-      sub_df 
-    }
-  }) %>% 
-  fill(loc, band, el, rep,  .direction = "down") %>% 
-  ungroup() %>% 
-  print( n = Inf)
-
-d
-
-
-
-
-
-
-
-
-
-
-
-
-
-df_test <- tibble(
-  plant_id = c(1, 1, 1, 1, 2, 3, 3, 3, 3),
-  week     = c(1, 2, 3, 4, 1, 1, 2, 3, 4),
-  status   = c(1, 1, 1, 1, 0, 1, 1, 1, 1)
-) %>% 
-  print(n = Inf)
-
-df_test %>%
-  complete(plant_id, week = full_seq(week, 1)) %>%
-  arrange(plant_id, week) %>%
-  group_by(plant_id) %>%
-  fill(status, .direction = "down") %>%
-  ungroup()
-
-df_complete
-
-
-
-  
-#   select(1:8) %>% 
-#   mutate(binary = case_when(D1_p == "dead" ~ "0",
-# .default = "1",
-# is.na(D1_p) ~ "X"
-# )) %>% 
-#   filter(binary != "X") %>% 
-#   print(n = 100)
-
-# fill in the missing rows so we have 15 plants per row still
-  # eg proportion alive at each date 
-  # can also plot this by phenological stage 
-  # veg (1) flower (2) fruit (3) dead (0)
