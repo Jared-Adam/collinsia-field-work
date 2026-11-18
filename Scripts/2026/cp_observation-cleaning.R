@@ -9,6 +9,10 @@ cp.dir <- here('Data/2026', '2026-5-26_Cp_obs.csv')
 
 cp = as_tibble(read.csv(cp.dir))
 
+q_el.dir <- here('Data/2026', 'ElevationByQuadrat_2026.csv')
+
+q_el = as_tibble(read.csv(q_el.dir))
+
 # cleaning ####
 
 cp
@@ -213,10 +217,6 @@ labeled_df <- next_df %>%
   relocate(Date, loc, band, el, qid, rep) %>% 
   select(-7)
 
-# 11/12/26
-# Add elevation by quadrat, not band
-# mutate(el = case_when())
-
 
 
 # df for the correct elevation
@@ -255,7 +255,7 @@ loc == 'IR' & qid == '899' ~ '7',
   mutate(rep = case_when(loc == 'IR' & qid == '697' ~ '2',
 loc == 'IR' & qid == '98' ~ '1',
 loc == 'IR' & qid == '698' ~ '2',
-.default = rep)) %>%
+.default = rep)) %>% # 11/18/26: Adding elevation at the quadrat level below
   mutate(el = case_when(band == '1' & loc == 'MC' ~ 5400,
                         band == '2'& loc == 'MC' ~6150,
                         band == '3' & loc == 'IR' ~ 6300,
@@ -274,9 +274,38 @@ full_join(repaired_loc, label_no_na) %>%
 # repaired df
 location_joined_df <- full_join(repaired_loc, label_no_na)
 
+###
+##
+#
+# 11/1/2026
+# FIX EL X Q
+
+location_joined_df %>% 
+  distinct(loc, band, qid, rep) %>% 
+  write.csv("distinct_qid_loc.csv", row.names = FALSE)
+
+# Reference df with elevation at the quadrat level
+q_el
+q_el_join <- q_el %>% 
+  rename(el = elevation,
+    qid = qnum) %>% 
+  mutate(qid = as.character(qid))
+
+appended_el <- location_joined_df %>% 
+  left_join(
+    q_el_join %>% 
+      select(el, qid),
+    by = "qid"
+  ) %>% 
+  relocate(Date, loc, band, el.x, el.y) %>% 
+  rename(el_band = el.x,
+    el_quadrat = el.y) %>% 
+  mutate(el_quadrat = round(el_quadrat * 0.3))
+
+
 
 # splitting the mines
-cleaned_df <- location_joined_df %>%
+cleaned_df <- appended_el %>%
   mutate(d6_splitter = case_when(
     D6_c.p == "0" ~ paste0("0",",",D6_c.p),
     .default = D6_c.p
@@ -297,8 +326,9 @@ cleaned_df <- location_joined_df %>%
     names = c("D7_ct", "D7_p"),
     too_few = "debug"
   ) %>% 
-  relocate(Date, loc, band, el, qid, rep, Tag, D1_p, D2_p, D3_p, D6_p, D7_p) %>% 
-  mutate_at(8:12, as.numeric)
+  relocate(Date, loc, band, el_quadrat, qid, rep, Tag, D1_p, D2_p, D3_p, D6_p, D7_p) %>% 
+  mutate_at(8:12, as.numeric) %>% 
+  rename(el = el_quadrat)
   
 # extract the max damage from each plant 
 cleaned_df %>% # quick vis with the wide df, switching to long
@@ -684,6 +714,19 @@ tags_complete <- tag_revised_df %>%
   select(-row_id) %>% 
   group_by(loc, qid, Tag, rep, band, el) %>% 
   complete(Date) 
+
+
+tags_complete
+
+# Are there any NAs where there should not be?
+# 
+
+
+
+
+
+
+
 
 # BINARY broken because NA might mean alive
 
