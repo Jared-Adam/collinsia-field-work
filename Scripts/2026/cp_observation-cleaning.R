@@ -330,6 +330,13 @@ cleaned_df <- appended_el %>%
   mutate_at(8:12, as.numeric) %>% 
   rename(el = el_quadrat)
   
+# ERROR HERE 11/18/2026
+# I need the dead plants to show up here
+# How should I do that?
+#Leave them all characters?
+unique(cleaned_df$D1_p)
+
+
 # extract the max damage from each plant 
 cleaned_df %>% # quick vis with the wide df, switching to long
   group_by(Tag, el, loc) %>% 
@@ -719,8 +726,17 @@ tags_complete <- tag_revised_df %>%
 tags_complete
 
 # Are there any NAs where there should not be?
-# 
+# splitting by loc to take a closer look 
+hr_test <- tags_complete %>% 
+  filter(loc == "HR") %>% 
+  filter(is.na(D1_p))
 
+ir_test <- tags_complete %>% 
+  filter(loc == "IR") %>% 
+  filter(D1_p == "Dead")
+
+# %>% 
+  filter(is.na(D1_p))
 
 
 
