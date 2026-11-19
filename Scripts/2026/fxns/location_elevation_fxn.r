@@ -1,8 +1,18 @@
 # Function to add location, band, elevation to quadrats 
 # NOT done, just copied in a bunch of code to recycle 
-elevation_band_fxn <- function(x){
-labeled_df <- next_df %>% 
-  rename(id = Qdrat.ID) %>% 
+elevation_band_fxn <- function(){
+
+mois_dir <- here("Data/2026", "2026-5-26_Cp_soil_moisture.csv")
+moisture <- as_tibble(read.csv(mois_dir))
+
+q_el.dir <- here('Data/2026', 'ElevationByQuadrat_2026.csv')
+q_el = as_tibble(read.csv(q_el.dir))
+  
+
+
+step_1 <- moisture %>% 
+  rename(id = Qdrat.Tag) %>% 
+  select(1:12) %>% 
   mutate(band = case_when(
     id == "813" | id == '838' | id == "794" | id == "71" | id == "893" | id == "891" | id == "914" | id == "945" | id == "898" ~ "1",
     id == "883" | id == "34" | id == "15" | id == "76" | id == "80" | id == "6" | id == " 457" | id == "416" | id == "458" ~ "2",
@@ -69,41 +79,40 @@ labeled_df <- next_df %>%
   
   
 # df for the correct elevation
-label_no_na <- labeled_df %>% 
+step_2 <- step_1 %>% 
   filter(!is.na(el))
 
 # df for errors in elevation 
-missing_loc <- labeled_df %>% 
+step_3 <- step_1 %>% 
   filter(is.na(el)) 
 
-missing_loc %>% 
-  distinct(Date, loc, band, qid)
+step_3 %>% 
+  distinct(Date, loc, band, id)
+
 
 # repairing the errors in elevation. Most of this is due to incorrect quadrat labels 
-repaired_loc <- missing_loc %>% 
-  mutate(loc = case_when(loc == '69' ~ "IR",
-loc == '457' ~ "MC",
-loc == '62' ~ "IR",
-loc == '910' ~ "MC", 
+step_3_repairs <- step_3 %>% 
+  mutate(loc = case_when(
+loc == '457' ~ "MC", 
 loc == '668' ~ "IR",
-loc == '654' ~ "IR",
+loc == '686' ~ 'IR',
+loc == '4' ~ 'IR',
 .default = loc)) %>% 
-  mutate(qid = case_when(loc == 'IR' & qid == '69' ~ '697',
-loc == 'IR' & qid == '654' ~ '652',
-loc == 'IR' & qid == '62' ~ '29',
-loc == 'MC' & qid == '910' ~ '914',
-loc == 'IR' & qid == '668' ~ '899',
-.default = qid)) %>% 
-  mutate(band = case_when(loc == 'IR' & qid == '697' ~ '8',
-loc == 'MC' & qid == '457' ~ '2',
-loc == 'IR' & qid == '652' ~ '6',
-loc == 'IR' & qid == '29' ~ '3',
-loc == 'MC' & qid == '914' ~ '1',
-loc == 'IR' & qid == '899' ~ '7',
-.default = band)) %>% 
-  mutate(rep = case_when(loc == 'IR' & qid == '697' ~ '2',
-loc == 'IR' & qid == '98' ~ '1',
-loc == 'IR' & qid == '698' ~ '2',
+  mutate(id = case_when(loc == 'IR' & id == '686' ~ '989',
+loc == 'IR' & id == '654' ~ '652',
+loc == 'MC' & id == '910' ~ '914',
+loc == 'IR' & id == '668' ~ '899',
+loc == 'IR' & id == '4' ~ '41',
+.default = as.character(id))) %>% 
+  mutate(band = case_when(
+loc == 'MC' & id == '457' ~ '2',
+loc == 'IR' & id == '899' ~ '7',
+loc == 'IR' & id == '989' ~ '7',
+loc == 'IR' & id == '41' ~ '9',
+.default = as.character(band))) %>% # walked awaye here, loc 4 needs to be fixed 
+  mutate(rep = case_when(loc == 'IR' & id == '41' ~ '1',
+loc == 'IR' & id == '98' ~ '1',
+loc == 'IR' & id == '698' ~ '2',
 .default = rep)) %>% # 11/18/26: Adding elevation at the quadrat level below
   mutate(el = case_when(band == '1' & loc == 'MC' ~ 5400,
                         band == '2'& loc == 'MC' ~6150,
@@ -112,35 +121,31 @@ loc == 'IR' & qid == '698' ~ '2',
                         band == '7' & loc == 'IR' ~ 8120,
                         band == '8' & loc == 'IR' & rep == '1' ~ 8120,
                         band == '8' & loc == 'IR' & rep == '2' ~ 8300,
+                        band == '9' & loc == 'IR' & rep == '1' ~ 8600,
                       .default = el)) %>%
-  mutate(el = as.numeric(el)) %>% 
+  mutate(el = as.numeric(el),
+    id = as.integer(id)) %>% 
   mutate(el = el*0.3) 
 
 # check for nas before saving object
-full_join(repaired_loc, label_no_na) %>% 
+full_join(step_2, step_3_repairs) %>% 
   filter(is.na(el))
 
 # repaired df
-location_joined_df <- full_join(repaired_loc, label_no_na)
+moisture_joined_df <- full_join(step_2, step_3_repairs) %>% 
+  rename(qid = id)
 
 ###
 ##
 #
-# 11/1/2026
-# FIX EL X Q
-
-location_joined_df %>% 
-  distinct(loc, band, qid, rep) %>% 
-  write.csv("distinct_qid_loc.csv", row.names = FALSE)
 
 # Reference df with elevation at the quadrat level
 q_el
 q_el_join <- q_el %>% 
   rename(el = elevation,
-    qid = qnum) %>% 
-  mutate(qid = as.character(qid))
+    qid = qnum)
 
-appended_el <- location_joined_df %>% 
+app_moisture_el <- moisture_joined_df %>% 
   left_join(
     q_el_join %>% 
       select(el, qid),
@@ -151,16 +156,12 @@ appended_el <- location_joined_df %>%
     el_quadrat = el.y) %>% 
   mutate(el_quadrat = round(el_quadrat * 0.3))
 
+  
+  # return 
 
-
-
-
-
-
-
-
-
-
+  return(list(app_moisture_el))
+  
+  
 }
 
 
