@@ -21,7 +21,6 @@ moisture_elev %>%
     avg_perm = (TL_Perm+BR_Perm)/ 2,
     avg_cond = (TL_Cond+BR_Cond)/2) %>% 
   relocate(Date, qid, avg_m, avg_temp, avg_perm, avg_cond) %>% 
-  select(1:6) %>% 
-  ggplot(aes(x = Date, y = avg_m, group = qid))+
+  ggplot(aes(x = el_quadrat, y = avg_m, group = qid))+
   geom_point()+
   geom_line()
