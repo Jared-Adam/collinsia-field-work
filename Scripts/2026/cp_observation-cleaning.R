@@ -326,15 +326,19 @@ cleaned_df <- appended_el %>%
     names = c("D7_ct", "D7_p"),
     too_few = "debug"
   ) %>% 
-  relocate(Date, loc, band, el_quadrat, qid, rep, Tag, D1_p, D2_p, D3_p, D6_p, D7_p) %>% 
+  relocate(Date, loc, band, el_quadrat, qid, rep, Tag, D1_p, D2_p, D3_p, D6_p, D7_p) %>%  
+  rename(el = el_quadrat) %>% 
+    mutate(dead_binary = case_when(D1_p == 'dead' | D1_p == "Dead" ~ 1,
+    .default = 0)) %>% 
+  mutate(sen_binary = case_when(D1_p == 'sen' | D1_p == "Sen" ~ 1, 
+    .default = 0)) %>%
+  mutate(D1_p = case_when(D1_p == 'na' ~ NA,
+    .default = D1_p)) %>% 
+  mutate(alive_binary = case_when(PH > 0 ~ 1,
+    .default = 0)) %>% 
   mutate_at(8:12, as.numeric) %>% 
-  rename(el = el_quadrat)
-  
-# ERROR HERE 11/18/2026
-# I need the dead plants to show up here
-# How should I do that?
-#Leave them all characters?
-unique(cleaned_df$D1_p)
+  filter(D1_p < 400)
+  # %>% write.csv("binary_test.csv", row.names = FALSE)
 
 
 # extract the max damage from each plant 
