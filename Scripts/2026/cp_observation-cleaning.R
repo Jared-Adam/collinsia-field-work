@@ -9,6 +9,10 @@ cp.dir <- here('Data/2026', '2026-5-26_Cp_obs.csv')
 
 cp = as_tibble(read.csv(cp.dir))
 
+q_el.dir <- here('Data/2026', 'ElevationByQuadrat_2026.csv')
+
+q_el = as_tibble(read.csv(q_el.dir))
+
 # cleaning ####
 
 cp
@@ -213,6 +217,8 @@ labeled_df <- next_df %>%
   relocate(Date, loc, band, el, qid, rep) %>% 
   select(-7)
 
+
+
 # df for the correct elevation
 label_no_na <- labeled_df %>% 
   filter(!is.na(el))
@@ -249,7 +255,7 @@ loc == 'IR' & qid == '899' ~ '7',
   mutate(rep = case_when(loc == 'IR' & qid == '697' ~ '2',
 loc == 'IR' & qid == '98' ~ '1',
 loc == 'IR' & qid == '698' ~ '2',
-.default = rep)) %>%
+.default = rep)) %>% # 11/18/26: Adding elevation at the quadrat level below
   mutate(el = case_when(band == '1' & loc == 'MC' ~ 5400,
                         band == '2'& loc == 'MC' ~6150,
                         band == '3' & loc == 'IR' ~ 6300,
@@ -257,8 +263,9 @@ loc == 'IR' & qid == '698' ~ '2',
                         band == '7' & loc == 'IR' ~ 8120,
                         band == '8' & loc == 'IR' & rep == '1' ~ 8120,
                         band == '8' & loc == 'IR' & rep == '2' ~ 8300,
-                      .default = el)) %>% 
-  distinct(Date, loc, band, qid, rep,el)
+                      .default = el)) %>%
+  mutate(el = as.numeric(el)) %>% 
+  mutate(el = el*0.3) 
 
 # check for nas before saving object
 full_join(repaired_loc, label_no_na) %>% 
@@ -267,9 +274,38 @@ full_join(repaired_loc, label_no_na) %>%
 # repaired df
 location_joined_df <- full_join(repaired_loc, label_no_na)
 
+###
+##
+#
+# 11/1/2026
+# FIX EL X Q
+
+location_joined_df %>% 
+  distinct(loc, band, qid, rep) %>% 
+  write.csv("distinct_qid_loc.csv", row.names = FALSE)
+
+# Reference df with elevation at the quadrat level
+q_el
+q_el_join <- q_el %>% 
+  rename(el = elevation,
+    qid = qnum) %>% 
+  mutate(qid = as.character(qid))
+
+appended_el <- location_joined_df %>% 
+  left_join(
+    q_el_join %>% 
+      select(el, qid),
+    by = "qid"
+  ) %>% 
+  relocate(Date, loc, band, el.x, el.y) %>% 
+  rename(el_band = el.x,
+    el_quadrat = el.y) %>% 
+  mutate(el_quadrat = round(el_quadrat * 0.3))
+
+
 
 # splitting the mines
-cleaned_df <- labeled_df %>%
+cleaned_df <- appended_el %>%
   mutate(d6_splitter = case_when(
     D6_c.p == "0" ~ paste0("0",",",D6_c.p),
     .default = D6_c.p
@@ -290,9 +326,17 @@ cleaned_df <- labeled_df %>%
     names = c("D7_ct", "D7_p"),
     too_few = "debug"
   ) %>% 
-  relocate(Date, loc, band, el, qid, rep, Tag, D1_p, D2_p, D3_p, D6_p, D7_p) %>% 
-  mutate_at(8:12, as.numeric)
+  relocate(Date, loc, band, el_quadrat, qid, rep, Tag, D1_p, D2_p, D3_p, D6_p, D7_p) %>% 
+  mutate_at(8:12, as.numeric) %>% 
+  rename(el = el_quadrat)
   
+# ERROR HERE 11/18/2026
+# I need the dead plants to show up here
+# How should I do that?
+#Leave them all characters?
+unique(cleaned_df$D1_p)
+
+
 # extract the max damage from each plant 
 cleaned_df %>% # quick vis with the wide df, switching to long
   group_by(Tag, el, loc) %>% 
@@ -355,16 +399,361 @@ x = "Elevation (m)")+
 
 # Mortality cleaning ####
 
-cleaned_df %>% 
-  select(1:8) %>% 
-  mutate(binary = case_when(D1_p == "dead" ~ "0",
-.default = "1",
-is.na(D1_p) ~ "X"
-)) %>% 
-  filter(binary != "X") %>% 
-  print(n = 100)
+# See note on 11/4 for rationale
+  # Repairing tags that are broken one location at a time 
 
-# fill in the missing rows so we have 15 plants per row still
-  # eg proportion alive at each date 
-  # can also plot this by phenological stage 
-  # veg (1) flower (2) fruit (3) dead (0)
+step1_tagRepair <- cleaned_df %>% 
+  mutate(Date = case_when(Date == "4/20/26" & qid == 71 ~ "4/10/26", 
+.default = Date)) %>% 
+  mutate(Date = str_replace(Date, "/26$", "/2026")) %>% 
+  # filter(qid == 71) %>% 
+  # arrange(Date) %>% 
+  mutate(Date = as.Date(Date, format = "%m/%d/%Y")) %>% 
+  arrange(Date) %>% 
+  select(1:7)
+
+
+# ###
+##
+#
+#. IR
+
+# Isolate the unique tags based on qid
+IR_tagRepair <- step1_tagRepair %>% 
+  filter(loc == "IR") 
+
+IR_List <- unique(IR_tagRepair$qid)
+
+
+# PLAN: 
+
+IR_tagRepair %>% 
+  filter(qid %in% IR_List) %>% 
+  group_by(qid) %>% 
+  summarise(tags = list(unique(Tag))) %>% 
+  filter(lengths(tags) > 15) %>% 
+  unnest(tags) %>%
+  #filter(qid == "105") %>% 
+  arrange(qid) %>% 
+  write.csv("IG_broken_tags.csv", row.names = FALSE)
+
+# REPAIRS
+IR_tagRepair %>% 
+  mutate(Tag = case_when(loc == "IR" & qid == "105" & Tag == "71" ~ "79",# IR
+    loc == "IR" & qid == "105" & Tag == "689" ~ "698",
+    loc == "IR" & qid == "29" & Tag == "51" ~ "15",
+    loc == "IR" & qid == "3" & Tag == "35" ~ "37",
+    loc == "IR" & qid == "302" & Tag == "273" ~ "278",
+    loc == "IR" & qid == "320" & Tag == "284" ~ "384",
+    loc == "IR" & qid == "36" & Tag == "807" ~ "897",
+    loc == "IR" & qid == "36" & Tag == "68" ~ "89",
+    loc == "IR" & qid == "433" & Tag == "29" ~ "62",
+    loc == "IR" & qid == "433" & Tag == "253" ~ "252",
+    loc == "IR" & qid == "433" & Tag == " " ~ "658",
+    loc == "IR" & qid == "620" & Tag == "892" ~ "268",
+    loc == "IR" & qid == "626" & Tag == "1" ~ "9",
+    loc == "IR" & qid == "652" & Tag == "19" ~ "49",
+    loc == "IR" & qid == "838" & Tag == "270" ~ "278",
+    loc == "IR" & qid == "899" & Tag == "14" ~ "24",
+    loc == "IR" & qid == "98" & Tag == "61" ~ "6",
+    loc == "IR" & qid == "989" & Tag == "71" ~ "7",
+    .default = Tag)) %>% 
+  filter(Tag != "na") %>% # for  IR quadrat 78
+  filter(qid %in% IR_List) %>% 
+  group_by(qid) %>% 
+  summarise(tags = list(unique(Tag))) %>% 
+  filter(lengths(tags) > 15) 
+
+###
+##
+#
+#. HR
+
+HR_tagRepair <- step1_tagRepair %>% 
+  filter(loc == "HR")
+
+HR_List <- unique(HR_tagRepair$qid)
+
+
+HR_tagRepair %>% 
+  mutate(Tag = case_when(loc == "HR" & qid == "6" & Tag == "6" ~ "9",  # HR
+    loc == "HR" & qid == "6" & Tag == "154" ~ "159",
+    loc == "HR" & qid == "639" & Tag == "565" ~ "556",
+    loc == "HR" & qid == "660" & Tag == "17" ~ "7",
+    loc == "HR" & qid == "660" & Tag == "24" ~ "27",
+    # loc == "HR" & qid == "660" & Date == "2026-6-24" & Tag == "41" ~ "11",
+    loc == "HR" & qid == "672" & Tag == "79" ~ "29",
+    loc == "HR" & qid == "672" & Tag == "33" ~ "23",
+    loc == "HR" & qid == "672" & Tag == "30" ~ "20",
+    loc == "HR" & qid == "683" & Tag == "29" ~ "24",
+    loc == "HR" & qid == "687" & Tag == "594" ~ "595",
+    loc == "HR" & qid == "71" & Tag == "809" ~ "869",
+    loc == "HR" & qid == "80" & Tag == "120" ~ "126",
+    loc == "HR" & qid == "80" & Tag == "104" ~ "164",
+    loc == "HR" & qid == "80" & Tag == "765" ~ "763",
+    loc == "HR" & qid == "891" & Tag == "777" ~ "977",
+    loc == "HR" & qid == "94" & Tag == "107" ~ "167",
+    loc == "HR" & qid == "96" & Tag == "108" ~ "168",
+    .default = Tag)) %>% 
+  filter(Tag != "574") %>% # 623 resolution
+  filter(Tag != "999") %>% # 660 resolution
+  mutate(filter_c = case_when(qid == "624" & Date == "2026-06-23" ~ "take", # fixing 624 issue
+    .default = "leave")) %>% 
+  filter(filter_c == "leave") %>% 
+  select(-8) %>% 
+  filter(qid %in% HR_List) %>% 
+  group_by(qid) %>% 
+  summarise(tags = list(unique(Tag))) %>% 
+  filter(lengths(tags) > 15) 
+#   unnest(tags) %>%
+# #   filter(qid == "105") %>% 
+#   arrange(qid) %>% 
+#   write.csv("HR_broken_tags.csv", row.names = FALSE)
+
+###
+##
+#
+#.  MC
+
+# extract 624 bc some are incorrect qid
+
+
+MC_broke_629 <- HR_tagRepair %>% 
+  filter(qid == "624") %>% 
+  mutate(filter_c = case_when(Date == "2026-06-23" ~ "take")) %>% 
+  filter(filter_c == "take") %>% 
+  mutate(qid = "629",
+    loc = "MC") %>% 
+  select(-8) %>% 
+  print()
+
+MC_tagRepair <- step1_tagRepair %>% 
+  filter(loc == "MC")
+
+MC_List <- unique(MC_tagRepair$qid)
+
+MC_tagRep_bind <- 
+  rbind(MC_tagRepair, MC_broke_629)
+
+MC_tagRep_bind %>%  
+  mutate(Tag = case_when(loc == "MC" & qid == "13" & Tag == "220" ~ "230",
+    loc == "MC" & qid == "13" & Tag == "477" ~ "877",
+    loc == "MC" & qid == "17" & Tag == "692" ~ "290",
+    loc == "MC" & qid == "17" & Tag == "256" ~ "656",
+    loc == "MC" & qid == "218" & Tag == "210" ~ "201",
+    loc == "MC" & qid == "218" & Tag == "102" ~ "201",
+    loc == "MC" & qid == "258" & Tag == "258" ~ "251",
+    loc == "MC" & qid == "259" & Tag == "226" ~ "266",
+    loc == "MC" & qid == "259" & Tag == "203" ~ "293",
+    loc == "MC" & qid == "263" & Tag == "353" ~ "853",
+    loc == "MC" & qid == "285" & Tag == "557" ~ "257",
+    loc == "MC" & qid == "285" & Tag == "279" ~ "271",
+    loc == "MC" & qid == "267" & Tag == "476" ~ "953",
+    loc == "MC" & qid == "458" & Tag == "667" ~ "67",
+    loc == "MC" & qid == "458" & Tag == "460" ~ "400",
+    loc == "MC" & qid == "610" & Tag == "707" ~ "767",
+    loc == "MC" & qid == "611" & Tag == "638" ~ "689",
+    loc == "MC" & qid == "629" & Tag == "851" ~ "651",
+    loc == "MC" & qid == "629" & Tag == "299" ~ "662",
+    loc == "MC" & qid == "634" & Tag == "662" ~ "602",
+    loc == "MC" & qid == "730" & Tag == "356" ~ "357",
+    loc == "MC" & qid == "81" & Tag == "43" ~ "143",
+    loc == "MC" & qid == "81" & Tag == "106" ~ "166",
+    loc == "MC" & qid == "81" & Tag == "112" ~ "211",
+    loc == "MC" & qid == "81" & Tag == "233" ~ "235",
+    loc == "MC" & qid == "416" & Tag == "184" ~ "484",
+    .default = Tag)) %>% 
+  filter(!(Date == "2026-07-17" & Tag == "55")) %>% 
+  filter(!(Date == "2026-06-30" & Tag == "247")) %>% 
+  mutate(qid = case_when(
+    qid == "457" & Tag == "186" ~ "416",
+    qid == "457" & Tag == "416" ~ "416",
+    qid == "457" & Tag == "451" ~ "416",
+    qid == "457" & Tag == "455" ~ "416",
+    qid == "457" & Tag == "463" ~ "416",
+    qid == "457" & Tag == "469" ~ "416",
+    qid == "457" & Tag == "471" ~ "416",
+    qid == "457" & Tag == "478" ~ "416",
+    qid == "457" & Tag == "484" ~ "416",
+    qid == "457" & Tag == "600" ~ "416",
+    qid == "457" & Tag == "634" ~ "416",
+    qid == "457" & Tag == "661" ~ "416",
+    .default = qid
+  )) %>% 
+  filter(qid %in% MC_List) %>% 
+  group_by(qid) %>% 
+  summarise(tags = list(unique(Tag))) %>% 
+  filter(lengths(tags) > 15) 
+#   unnest(tags) %>%
+# #  filter(qid == "105") %>% 
+#   arrange(qid) %>% 
+# write.csv("MC_broken_tags.csv", row.names = FALSE)
+
+# Implementing the changes at the whole-df level now :
+# 11/12/26
+
+master_qid_list <- unique(cleaned_df$qid)
+
+
+tag_revised_df <- cleaned_df  %>% 
+  mutate(Date = case_when(Date == "4/20/26" & qid == 71 ~ "4/10/26", 
+.default = Date)) %>% 
+  mutate(Date = str_replace(Date, "/26$", "/2026")) %>% 
+  mutate(Date = as.Date(Date, format = "%m/%d/%Y")) %>% 
+  mutate(Tag = case_when(loc == "IR" & qid == "105" & Tag == "71" ~ "79",# IR
+    loc == "IR" & qid == "105" & Tag == "689" ~ "698",
+    loc == "IR" & qid == "29" & Tag == "51" ~ "15",
+    loc == "IR" & qid == "3" & Tag == "35" ~ "37",
+    loc == "IR" & qid == "302" & Tag == "273" ~ "278",
+    loc == "IR" & qid == "320" & Tag == "284" ~ "384",
+    loc == "IR" & qid == "36" & Tag == "807" ~ "897",
+    loc == "IR" & qid == "36" & Tag == "68" ~ "89",
+    loc == "IR" & qid == "433" & Tag == "29" ~ "62",
+    loc == "IR" & qid == "433" & Tag == "253" ~ "252",
+    loc == "IR" & qid == "433" & Tag == " " ~ "658",
+    loc == "IR" & qid == "620" & Tag == "892" ~ "268",
+    loc == "IR" & qid == "626" & Tag == "1" ~ "9",
+    loc == "IR" & qid == "652" & Tag == "19" ~ "49",
+    loc == "IR" & qid == "838" & Tag == "270" ~ "278",
+    loc == "IR" & qid == "899" & Tag == "14" ~ "24",
+    loc == "IR" & qid == "98" & Tag == "61" ~ "6",
+    loc == "IR" & qid == "989" & Tag == "71" ~ "7",
+    .default = Tag)) %>% 
+  filter(Tag != "na") %>% 
+  mutate(Tag = case_when(loc == "HR" & qid == "6" & Tag == "6" ~ "9",  # HR
+    loc == "HR" & qid == "6" & Tag == "154" ~ "159",
+    loc == "HR" & qid == "639" & Tag == "565" ~ "556",
+    loc == "HR" & qid == "660" & Tag == "17" ~ "7",
+    loc == "HR" & qid == "660" & Tag == "24" ~ "27",
+    loc == "HR" & qid == "660" & Date == "2026-6-24" & PH == '23' & Tag == "41" ~ "11",
+    loc == "HR" & qid == "672" & Tag == "79" ~ "29",
+    loc == "HR" & qid == "672" & Tag == "33" ~ "23",
+    loc == "HR" & qid == "672" & Tag == "30" ~ "20",
+    loc == "HR" & qid == "683" & Tag == "29" ~ "24",
+    loc == "HR" & qid == "687" & Tag == "594" ~ "595",
+    loc == "HR" & qid == "71" & Tag == "809" ~ "869",
+    loc == "HR" & qid == "80" & Tag == "120" ~ "126",
+    loc == "HR" & qid == "80" & Tag == "104" ~ "164",
+    loc == "HR" & qid == "80" & Tag == "765" ~ "763",
+    loc == "HR" & qid == "891" & Tag == "777" ~ "977",
+    loc == "HR" & qid == "94" & Tag == "107" ~ "167",
+    loc == "HR" & qid == "96" & Tag == "108" ~ "168",
+    .default = Tag)) %>% 
+  filter(Tag != "574") %>% # 623 resolution
+  filter(Tag != "999") %>% # 660 resolution
+  mutate(qid = case_when(loc == "HR" & qid == "624" & Date == "2026-06-23" ~ "629", # fixing 624 issue
+    .default = qid)) %>% 
+  mutate(loc = case_when(loc == "HR" & qid == '629' & Date == "2026-06-23" ~ "MC",
+    .default = loc)) %>% # fixing 624 issue
+  mutate(Tag = case_when(loc == "MC" & qid == "13" & Tag == "220" ~ "230", # MC 
+    loc == "MC" & qid == "13" & Tag == "477" ~ "877",
+    loc == "MC" & qid == "17" & Tag == "692" ~ "290",
+    loc == "MC" & qid == "17" & Tag == "256" ~ "656",
+    loc == "MC" & qid == "218" & Tag == "210" ~ "201",
+    loc == "MC" & qid == "218" & Tag == "102" ~ "201",
+    loc == "MC" & qid == "258" & Tag == "258" ~ "251",
+    loc == "MC" & qid == "259" & Tag == "226" ~ "266",
+    loc == "MC" & qid == "259" & Tag == "203" ~ "293",
+    loc == "MC" & qid == "263" & Tag == "353" ~ "853",
+    loc == "MC" & qid == "285" & Tag == "557" ~ "257",
+    loc == "MC" & qid == "285" & Tag == "279" ~ "271",
+    loc == "MC" & qid == "267" & Tag == "476" ~ "953",
+    loc == "MC" & qid == "458" & Tag == "667" ~ "67",
+    loc == "MC" & qid == "458" & Tag == "460" ~ "400",
+    loc == "MC" & qid == "610" & Tag == "707" ~ "767",
+    loc == "MC" & qid == "611" & Tag == "638" ~ "689",
+    loc == "MC" & qid == "629" & Tag == "851" ~ "651",
+    loc == "MC" & qid == "629" & Tag == "299" ~ "662",
+    loc == "MC" & qid == "634" & Tag == "662" ~ "602",
+    loc == "MC" & qid == "730" & Tag == "356" ~ "357",
+    loc == "MC" & qid == "81" & Tag == "43" ~ "143",
+    loc == "MC" & qid == "81" & Tag == "106" ~ "166",
+    loc == "MC" & qid == "81" & Tag == "112" ~ "211",
+    loc == "MC" & qid == "81" & Tag == "233" ~ "235",
+    loc == "MC" & qid == "416" & Tag == "184" ~ "484",
+    .default = Tag)) %>% 
+  filter(!(Date == "2026-07-17" & Tag == "55")) %>% 
+  filter(!(Date == "2026-06-30" & Tag == "247")) %>% 
+  mutate(qid = case_when(
+    qid == "457" & Tag == "186" ~ "416",
+    qid == "457" & Tag == "416" ~ "416",
+    qid == "457" & Tag == "451" ~ "416",
+    qid == "457" & Tag == "455" ~ "416",
+    qid == "457" & Tag == "463" ~ "416",
+    qid == "457" & Tag == "469" ~ "416",
+    qid == "457" & Tag == "471" ~ "416",
+    qid == "457" & Tag == "478" ~ "416",
+    qid == "457" & Tag == "484" ~ "416",
+    qid == "457" & Tag == "600" ~ "416",
+    qid == "457" & Tag == "634" ~ "416",
+    qid == "457" & Tag == "661" ~ "416",
+    .default = qid
+  )) %>% 
+  filter(!(loc == "MC" & Date == "2026-4-11" & qid == "457" & Tag == "467" & PH == "8")) %>% 
+    filter(!(loc == "MC" & qid == "13" & Tag == "798" & PH == "62"))
+  # filter(qid %in% master_qid_list) %>% 
+  # group_by(qid) %>% 
+  # summarise(tags = list(unique(Tag))) %>% 
+  # filter(lengths(tags) > 15) 
+# %>% 
+#     unnest(tags) %>%
+#   arrange(qid) %>% 
+# write.csv("MASTER_broken_tags.csv", row.names = FALSE)
+
+# An attempt at expand with the new, hopefully error free, df
+# 11/12/26
+
+# Does not change anything 
+tag_revised_df %>% 
+  expand(nesting(qid, Tag, Date, loc)) %>% 
+  left_join(tag_revised_df, by = c('qid', 'Tag', 'Date', 'loc'))
+
+
+tags_complete <- tag_revised_df %>% 
+  mutate(row_id = row_number(), .by = c(Date, qid)) %>% 
+  relocate(row_id) %>% 
+  group_by(Date, qid) %>% 
+  complete(row_id = 1:15) %>% 
+  ungroup()%>%  
+  group_by(Date, qid) %>% 
+  fill(Tag, loc, band, el, rep, .direction = 'down') %>% 
+  ungroup() %>% 
+  select(-row_id) %>% 
+  group_by(loc, qid, Tag, rep, band, el) %>% 
+  complete(Date) 
+
+
+tags_complete
+
+# Are there any NAs where there should not be?
+# splitting by loc to take a closer look 
+hr_test <- tags_complete %>% 
+  filter(loc == "HR") %>% 
+  filter(is.na(D1_p))
+
+ir_test <- tags_complete %>% 
+  filter(loc == "IR") %>% 
+  filter(D1_p == "Dead")
+
+# %>% 
+  filter(is.na(D1_p))
+
+
+
+
+
+
+
+# BINARY broken because NA might mean alive
+
+# tag_binary <- tags_complete %>%   
+#   select(1:8) %>% 
+#   mutate(binary = case_when(D1_p == "dead" ~ "0",
+# .default = "1",
+# is.na(D1_p) ~ NA
+# ))
+
+tags_complete %>% 
+  filter()
+  ggplot(aes(x = el, y = D1_p))+
+  geom_point(aes(color = loc))
