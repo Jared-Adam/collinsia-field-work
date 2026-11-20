@@ -158,8 +158,8 @@ app_moisture_el <- moisture_joined_df %>%
 
   
   # return 
-
-  return(list(app_moisture_el))
+moisture_elev <- as_tibble(app_moisture_el)
+  return(moisture_elev)
   
   
 }
