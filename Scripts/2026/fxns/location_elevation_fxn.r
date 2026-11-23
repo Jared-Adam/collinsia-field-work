@@ -1,5 +1,4 @@
-# Function to add location, band, elevation to quadrats 
-# NOT done, just copied in a bunch of code to recycle 
+
 elevation_band_fxn <- function(){
 
 mois_dir <- here("Data/2026", "2026-5-26_Cp_soil_moisture.csv")

@@ -1,0 +1,773 @@
+  
+cp_clean_function <- function() {
+
+# data #####
+
+cp.dir <- here('Data/2026', '2026-5-26_Cp_obs.csv')
+cp = as_tibble(read.csv(cp.dir))
+
+q_el.dir <- here('Data/2026', 'ElevationByQuadrat_2026.csv')
+q_el = as_tibble(read.csv(q_el.dir))
+
+
+
+
+
+# cleaning ####
+
+cp
+
+cp %>% 
+  select(-21, -22, -23, -24, -25, -26) %>% 
+   slice(1:100) %>% 
+  mutate(test =
+           case_when(
+             EFN.score == "1" ~ paste0("0", ",", EFN.ct),
+             EFN.score == "2" ~ paste0(EFN.ct, ",", "0"),
+             EFN.ct == "0" ~ paste0("0", ",", "0"),
+             .default = EFN.ct
+           )
+  ) %>% 
+  separate_wider_delim(
+    cols = test,
+    delim = ",",
+    names = c("EFN_sc_2", "EFN_sc_1")) %>% 
+  select(-c(18,19)) %>% 
+  mutate(across(
+    .cols = c(5:16, 18:20),
+    .fns = ~case_when(
+      D1_p == 'dead' ~ NA,
+      TRUE ~ .x
+    )
+  )) %>%
+  mutate(D1_p = case_when(
+    D1_p == "Sen" | D1_p == 'sen' ~ '0', 
+    .default = D1_p
+  )) 
+
+
+# pick up here, this is not working. Why?
+# there are several rows with nonsense. some dots, some unsre
+# starting with removal of dots
+
+cp %>% 
+  filter(str_detect(EFN.ct, "\\.")) %>% # dots are wildcards, so must be preceded with \\
+  mutate(EFN.ct = str_replace_all(EFN.ct, "\\.", ","))
+
+
+
+debug <- cp %>% 
+  select(-21, -22, -23, -24, -25, -26) %>%
+  mutate(EFN.ct = str_replace_all(EFN.ct, "\\.", ",")) %>% 
+  mutate(test =
+           case_when(
+             EFN.score == "1" ~ paste0("0", ",", EFN.ct),
+             EFN.score == "2" ~ paste0(EFN.ct, ",", "0"),
+             EFN.ct == "0" ~ paste0("0", ",", "0"),
+             .default = EFN.ct
+           )
+  ) %>% 
+  separate_wider_delim(
+    test, 
+    delim = ",", 
+    names = c("EFN_sc_2", "EFN_sc_1"),
+    too_few = "debug"
+  ) 
+
+# extract the TRUE
+test_ok_df <- debug %>% 
+  filter(test_ok == TRUE) # removing the confusing rows for now
+
+# extract the FALSE
+test_false_df <- debug %>% filter(!test_ok) %>% 
+  relocate(EFN.ct, EFN.score, test) %>% 
+  print(n = Inf)
+
+# SOLUTION: I have a test_ok column that I will use to parce the case_when
+  # I still need to subset and then merge after the corrections have been made
+
+colnames(test_false_df)
+false_clean_df <- test_false_df %>% 
+  mutate(EFN.score = case_when(test_ok == FALSE & Qdrat.ID == 683 & Tag == 28 ~ 1,
+                              test_ok == FALSE & Qdrat.ID == 76 & Tag == 132 ~ 1,
+                              test_ok == FALSE & Qdrat.ID == 76 & Tag == 135 ~ 1,
+                              test_ok == FALSE & Qdrat.ID == 76 & Tag == 123 ~ 1,
+                              test_ok == FALSE & Qdrat.ID == 691 & Tag == 11 ~ 1,
+                              test_ok == FALSE & Qdrat.ID == 691 & Tag == 2 ~ 1,
+                              test_ok == FALSE & Qdrat.ID == 619 & Tag == 9 ~ 2,
+                              test_ok == FALSE & Qdrat.ID == 619 & Tag == 1 ~ 2,
+                              test_ok == FALSE & Qdrat.ID == 650 & Tag == 10 ~ 1,
+                              test_ok == FALSE & Qdrat.ID == 883 & Tag == 234 ~ 1,
+  .default = as.numeric(EFN.score))) %>%
+  mutate(EFN.ct = case_when(test_ok == FALSE & Qdrat.ID == 76 & Tag == 132 ~ 2,
+                            test_ok == FALSE & Qdrat.ID == 76 & Tag == 135 ~ 2,
+                            test_ok == FALSE & Qdrat.ID == 76 & Tag == 123 ~ 2,
+                            test_ok == FALSE & Qdrat.ID == 691 & Tag == 11 ~ 12,
+                          .default = as.numeric(EFN.ct))
+                        ) %>% 
+  select(-c(3,22,23,24,25,26)) %>% # need to remove the old columns from when I ran delim earlier
+  mutate(test =
+           case_when(
+             EFN.score == "1" ~ paste0("0", ",", EFN.ct),
+             EFN.score == "2" ~ paste0(EFN.ct, ",", "0"),
+             EFN.ct == "0" ~ paste0("0", ",", "0")
+           )
+  ) %>% 
+  separate_wider_delim(
+    test, 
+    delim = ",", 
+    names = c("EFN_sc_2", "EFN_sc_1"),
+    too_few = "debug"
+  ) %>% 
+  print(n = Inf)
+
+
+# joining the old and new dfs
+
+false_clean_df
+ready <- test_ok_df %>% 
+  mutate_at(18:19, as.numeric)
+
+joined_df <- full_join(false_clean_df, ready)
+
+
+
+# NOTE: 10/21/2026 
+  # I am NOT removing NAs anymore. I cannot recall why I removed them originally 
+# OLD: now getting rid of the NAs as they are not pertinent to EFNs
+next_df <- joined_df
+
+###
+##
+#
+# again_df <- next_df %>% 
+#   mutate(across(where(is.character), ~na_if(., "na"))) %>% 
+#   drop_na()
+#
+##
+###
+
+
+# add elevation ####
+# going to add a band column and assign that by qid and then add elev ~ band
+
+labeled_df <- next_df %>% 
+  rename(id = Qdrat.ID) %>% 
+  mutate(band = case_when(
+    id == "813" | id == '838' | id == "794" | id == "71" | id == "893" | id == "891" | id == "914" | id == "945" | id == "898" ~ "1",
+    id == "883" | id == "34" | id == "15" | id == "76" | id == "80" | id == "6" | id == " 457" | id == "416" | id == "458" ~ "2",
+    id == "3" | id == "29" | id == "433"| id == "96" | id == "38"| id == "94"| id == "667"| id == "815" | id == "610" ~ "3",
+    id == "320"| id == "387" | id == "302" | id == "623" | id == "639" | id == "687" | id == "259" | id == "258" | id == "285" ~ "4",
+    id == "311" | id == "319" | id == "347" | id == "574" | id == "695" | id == "636" | id == "218" | id == "240" | id == "227" ~ "5",
+    id == "652" | id == "989" | id == "626" | id == "674" | id == "660" | id == "683" | id == "634" | id == "611" | id == "609" ~ "6",
+    id == "696" | id == "670" | id == "899" | id == "624" | id == "672" | id == "632" | id == "614" | id == "629" | id == "642" ~ "7",
+    id == "699" | id == "98" | id == "640" | id == "698" | id == "697" | id == "604" | id == "619" | id == "691" | id == "650" ~ "8",
+    id == "655" | id == "700" | id == "41" | id == "620" | id == "78" | id == "36" | id == "263" | id == "17" | id == "730" ~ "9",
+    id == "63" | id == "905" | id == "105" | id == "88" | id == "49" | id == "637" | id == "27" | id == "13" | id == "81" ~ "10",
+    .default = as.character(id)
+  )) %>% 
+  mutate(loc = case_when(
+    id == "813" | id == '838' | id == "794" | id == "883" | id == "34" | id == "15" | id == "3" | id == "29" | id == "433" | id == "320"| id == "387" | id == "302" |
+      id == "311" | id == "319" | id == "347" | id == "652" | id == "989" | id == "626" | id == "696" | id == "670" | id == "899" | id == "699" | id == "98" | id == "640" | 
+      id == "655" | id == "700" | id == "41" | id == "63" | id == "905" | id == "105" | id == "698" | id == "697" | id == "604" | id == "620" | id == "78" | id == "36" ~ "IR",
+    id == "71" | id == "893" | id == "891" | id == "76" | id == "80" | id == "6" | id == "96" | id == "38"| id == "94"| id == "623" | id == "639" | id == "687" |
+      id == "574" | id == "695" | id == "636" | id == "674" | id == "660" | id == "683" | id == "624" | id == "672" | id == "632" ~ "HR",
+    id == "914" | id == "945" | id == "898" | id == " 457" | id == "416" | id == "458" | id == "667"| id == "815" | id == "610" | id == "259" | id == "258" | id == "285" |
+      id == "218" | id == "240" | id == "227" | id == "634" | id == "611" | id == "609" | id == "614" | id == "629" | id == "642" | id == "619" | id == "691" | id == "650"|
+       id == "263" | id == "17" | id == "730" | id == "88" | id == "49" | id == "637" | id == "27" | id == "13" | id == "81" ~ "MC",
+    .default = as.character(id)
+  )) %>% 
+  mutate(rep = case_when(
+    id == "699" | id == " 98" | id == "640" | id == "655" | id == "700" | id == "41" | id == "88" | id == "49" | id == "637" ~ "1",
+    id == "27" | id == "13" | id == "81" | id == "687" | id == "697" | id == "604" | id == "620" | id == "78" | id == "36" ~ "2",
+    .default = NULL
+  )) %>% 
+  mutate(el = case_when(band == '1' & loc == 'MC' ~ '5400',
+                        band == '2'& loc == 'MC' ~'6150',
+                        band == '3' & loc == 'MC'~ '6320',
+                        band == '4' & loc == 'MC'~ '6760', 
+                        band == '5' & loc == 'MC'~ '7200',
+                        band == '6' & loc == 'MC'~ '7900', 
+                        band == '7' & loc == 'MC'~ '8200',
+                        band == '8'& loc == 'MC' ~ '8370',
+                        band == '9' & loc == 'MC'~ '8800',
+                        band == '10'& loc == 'MC' ~ '9150', 
+                        band == '1' & loc == 'IR' ~ '5500', 
+                        band == '2' & loc == 'IR' ~ '5650', 
+                        band == '3' & loc == 'IR' ~ '6300',
+                        band == '4' & loc == 'IR' ~ '6650', 
+                        band == '5' & loc == "IR" ~ '6950', 
+                        band == '6' & loc == 'IR' ~ '7500', 
+                        band == '7' & loc == 'IR' ~ '8120',
+                        band == '8' & loc == 'IR' & rep == '1' ~ '8120',
+                        band == '8' & loc == 'IR' & rep == '2' ~ '8300',
+                        band == '9' & loc == 'IR' & rep == '1' ~ '8600',
+                        band == '9' & loc == 'IR' & rep == '2' ~ '9000', 
+                        band == '10' & loc == 'IR' ~ '9500',
+                        band == '1' & loc == 'HR' ~ '5600',
+                        band == '2' & loc == 'HR' ~ '5900',
+                        band == '3' & loc == 'HR' ~ '6300',
+                        band == '4' & loc == 'HR' ~ '6750', 
+                        band == '5' & loc == 'HR' ~ '7100', 
+                        band == '6' & loc == 'HR' ~ '7600',
+                        band == '7' & loc == 'HR' ~ '8000')) %>%
+  mutate(el = as.numeric(el)) %>% 
+  mutate(el = el*0.3) %>% 
+  mutate(qid = as.factor(id)) %>% 
+  relocate(Date, loc, band, el, qid, rep) %>% 
+  select(-7)
+
+
+
+# df for the correct elevation
+label_no_na <- labeled_df %>% 
+  filter(!is.na(el))
+
+# df for errors in elevation 
+missing_loc <- labeled_df %>% 
+  filter(is.na(el)) 
+
+missing_loc %>% 
+  distinct(Date, loc, band, qid)
+
+# repairing the errors in elevation. Most of this is due to incorrect quadrat labels 
+repaired_loc <- missing_loc %>% 
+  mutate(loc = case_when(loc == '69' ~ "IR",
+loc == '457' ~ "MC",
+loc == '62' ~ "IR",
+loc == '910' ~ "MC", 
+loc == '668' ~ "IR",
+loc == '654' ~ "IR",
+.default = loc)) %>% 
+  mutate(qid = case_when(loc == 'IR' & qid == '69' ~ '697',
+loc == 'IR' & qid == '654' ~ '652',
+loc == 'IR' & qid == '62' ~ '29',
+loc == 'MC' & qid == '910' ~ '914',
+loc == 'IR' & qid == '668' ~ '899',
+.default = qid)) %>% 
+  mutate(band = case_when(loc == 'IR' & qid == '697' ~ '8',
+loc == 'MC' & qid == '457' ~ '2',
+loc == 'IR' & qid == '652' ~ '6',
+loc == 'IR' & qid == '29' ~ '3',
+loc == 'MC' & qid == '914' ~ '1',
+loc == 'IR' & qid == '899' ~ '7',
+.default = band)) %>% 
+  mutate(rep = case_when(loc == 'IR' & qid == '697' ~ '2',
+loc == 'IR' & qid == '98' ~ '1',
+loc == 'IR' & qid == '698' ~ '2',
+.default = rep)) %>% # 11/18/26: Adding elevation at the quadrat level below
+  mutate(el = case_when(band == '1' & loc == 'MC' ~ 5400,
+                        band == '2'& loc == 'MC' ~6150,
+                        band == '3' & loc == 'IR' ~ 6300,
+                        band == '6' & loc == 'IR' ~ 7500, 
+                        band == '7' & loc == 'IR' ~ 8120,
+                        band == '8' & loc == 'IR' & rep == '1' ~ 8120,
+                        band == '8' & loc == 'IR' & rep == '2' ~ 8300,
+                      .default = el)) %>%
+  mutate(el = as.numeric(el)) %>% 
+  mutate(el = el*0.3) 
+
+# check for nas before saving object
+full_join(repaired_loc, label_no_na) %>% 
+  filter(is.na(el))
+
+# repaired df
+location_joined_df <- full_join(repaired_loc, label_no_na)
+
+###
+##
+#
+# 11/1/2026
+# FIX EL X Q
+
+location_joined_df %>% 
+  distinct(loc, band, qid, rep) %>% 
+  write.csv("distinct_qid_loc.csv", row.names = FALSE)
+
+# Reference df with elevation at the quadrat level
+q_el
+q_el_join <- q_el %>% 
+  rename(el = elevation,
+    qid = qnum) %>% 
+  mutate(qid = as.character(qid))
+
+appended_el <- location_joined_df %>% 
+  left_join(
+    q_el_join %>% 
+      select(el, qid),
+    by = "qid"
+  ) %>% 
+  relocate(Date, loc, band, el.x, el.y) %>% 
+  rename(el_band = el.x,
+    el_quadrat = el.y) %>% 
+  mutate(el_quadrat = round(el_quadrat * 0.3))
+
+appended_el %>% 
+  mutate(D1_p = as.numeric(D1_p)) %>% 
+  filter(D1_p > 100)
+
+# splitting the mines
+cleaned_df <- appended_el %>%
+  mutate(d6_splitter = case_when(
+    D6_c.p == "0" ~ paste0("0",",",D6_c.p),
+    .default = D6_c.p
+  )) %>% 
+  separate_wider_delim(
+    cols = d6_splitter, 
+    delim = ",", 
+    names = c("D6_ct", "D6_p"),
+    too_few = "debug"
+  ) %>% 
+  mutate(d7_splitter = case_when(
+    D7_c.p == "0" ~ paste0("0", ",", D7_c.p),
+    .default = D7_c.p
+  )) %>% 
+  separate_wider_delim(
+    d7_splitter, 
+    delim = ",", 
+    names = c("D7_ct", "D7_p"),
+    too_few = "debug"
+  ) %>% 
+  relocate(Date, loc, band, el_quadrat, qid, rep, Tag, D1_p, D2_p, D3_p, D6_p, D7_p) %>%  
+  rename(el = el_quadrat) %>% 
+    mutate(dead_binary = case_when(D1_p == 'dead' | D1_p == "Dead" ~ 1,
+    .default = 0)) %>% 
+  mutate(sen_binary = case_when(D1_p == 'sen' | D1_p == "Sen" ~ 1, 
+    .default = 0)) %>%
+  mutate(D1_p = case_when(D1_p == 'na' ~ NA,
+    .default = D1_p)) %>% 
+  mutate(alive_binary = case_when(PH > 0 ~ 1,
+    .default = 0)) %>% 
+  mutate_at(8:12, as.numeric) 
+# %>% 
+#   filter(D1_p != 472)
+  # %>% write.csv("binary_test.csv", row.names = FALSE)
+
+
+# extract the max damage from each plant 
+cleaned_df %>% # quick vis with the wide df, switching to long
+  group_by(Tag, el, loc) %>% 
+  summarise(D1_value = max(D1_p, na.rm = TRUE),
+D2_value = max(D2_p, na.rm = TRUE),
+D3_value = max(D3_p, na.rm = TRUE),
+D6_value = max(D6_p, na.rm = TRUE),
+D7_value = max(D7_p, na.rm = TRUE)) %>%
+  ungroup() %>% 
+  na.omit() %>% 
+  ggplot(aes(x = el, y = D1_value)) +
+  geom_point()
+
+cleaned_df %>% # just looking at the spread
+  group_by(el) %>% 
+  summarise(max = max(el, na.rm = TRUE)) %>% 
+  print(n = Inf)
+
+max_value_df <- cleaned_df %>% # new df for the max values 
+  group_by(Tag, el, loc, band) %>% 
+  summarise(D1_value = max(D1_p, na.rm = TRUE),
+D2_value = max(D2_p, na.rm = TRUE),
+D3_value = max(D3_p, na.rm = TRUE),
+D6_value = max(D6_p, na.rm = TRUE),
+D7_value = max(D7_p, na.rm = TRUE)) %>%
+  ungroup() %>% 
+  na.omit() %>% 
+  pivot_longer(
+    c('D1_value', 'D2_value', 'D3_value', 'D6_value', 'D7_value'),
+    names_to = 'dmg_type',
+    values_to = 'max_p'
+  ) %>% 
+  mutate(Tag = case_when(
+    Tag == " " ~ 'X', .default = Tag
+  )) %>% 
+  mutate(Tag = as.factor(Tag))  
+  
+  
+# in the above math there is an issue somewhere that is causing some -Inf values. IDK why
+max_value_df %>% 
+  filter(max_p == -Inf)
+
+e_df <- max_value_df %>% 
+  group_by(band, el, dmg_type) %>% 
+  filter(max_p != -Inf) %>% 
+  summarise(mean = mean(max_p, na.rm = TRUE)) 
+
+
+# plot of the max means... Why?
+e_df %>% 
+  ggplot(aes(x = el, y = mean))+
+  geom_point(size = 2)+
+  facet_grid(cols = vars(dmg_type))+
+  xlim(1500,3000)+
+  ylim(0,15)+
+  geom_smooth(method = 'gam',
+formula = y~s(x, k=4))+
+  labs(title = "Mean damage percent x damage type",
+y = "Mean percent damage",
+x = "Elevation (m)")+
+  theme_bw()
+
+# Mortality cleaning ####
+
+# See note on 11/4 for rationale
+  # Repairing tags that are broken one location at a time 
+
+step1_tagRepair <- cleaned_df %>% 
+  mutate(Date = case_when(Date == "4/20/26" & qid == 71 ~ "4/10/26", 
+.default = Date)) %>% 
+  mutate(Date = str_replace(Date, "/26$", "/2026")) %>% 
+  # filter(qid == 71) %>% 
+  # arrange(Date) %>% 
+  mutate(Date = as.Date(Date, format = "%m/%d/%Y")) %>% 
+  arrange(Date) %>% 
+  select(1:7)
+
+
+# ###
+##
+#
+#. IR
+
+# Isolate the unique tags based on qid
+IR_tagRepair <- step1_tagRepair %>% 
+  filter(loc == "IR") 
+
+IR_List <- unique(IR_tagRepair$qid)
+
+
+# PLAN: 
+
+IR_tagRepair %>% 
+  filter(qid %in% IR_List) %>% 
+  group_by(qid) %>% 
+  summarise(tags = list(unique(Tag))) %>% 
+  filter(lengths(tags) > 15) %>% 
+  unnest(tags) %>%
+  #filter(qid == "105") %>% 
+  arrange(qid) %>% 
+  write.csv("IG_broken_tags.csv", row.names = FALSE)
+
+# REPAIRS
+IR_tagRepair %>% 
+  mutate(Tag = case_when(loc == "IR" & qid == "105" & Tag == "71" ~ "79",# IR
+    loc == "IR" & qid == "105" & Tag == "689" ~ "698",
+    loc == "IR" & qid == "29" & Tag == "51" ~ "15",
+    loc == "IR" & qid == "3" & Tag == "35" ~ "37",
+    loc == "IR" & qid == "302" & Tag == "273" ~ "278",
+    loc == "IR" & qid == "320" & Tag == "284" ~ "384",
+    loc == "IR" & qid == "36" & Tag == "807" ~ "897",
+    loc == "IR" & qid == "36" & Tag == "68" ~ "89",
+    loc == "IR" & qid == "433" & Tag == "29" ~ "62",
+    loc == "IR" & qid == "433" & Tag == "253" ~ "252",
+    loc == "IR" & qid == "433" & Tag == " " ~ "658",
+    loc == "IR" & qid == "620" & Tag == "892" ~ "268",
+    loc == "IR" & qid == "626" & Tag == "1" ~ "9",
+    loc == "IR" & qid == "652" & Tag == "19" ~ "49",
+    loc == "IR" & qid == "838" & Tag == "270" ~ "278",
+    loc == "IR" & qid == "899" & Tag == "14" ~ "24",
+    loc == "IR" & qid == "98" & Tag == "61" ~ "6",
+    loc == "IR" & qid == "989" & Tag == "71" ~ "7",
+    .default = Tag)) %>% 
+  filter(Tag != "na") %>% # for  IR quadrat 78
+  filter(qid %in% IR_List) %>% 
+  group_by(qid) %>% 
+  summarise(tags = list(unique(Tag))) %>% 
+  filter(lengths(tags) > 15) 
+
+###
+##
+#
+#. HR
+
+HR_tagRepair <- step1_tagRepair %>% 
+  filter(loc == "HR")
+
+HR_List <- unique(HR_tagRepair$qid)
+
+
+HR_tagRepair %>% 
+  mutate(Tag = case_when(loc == "HR" & qid == "6" & Tag == "6" ~ "9",  # HR
+    loc == "HR" & qid == "6" & Tag == "154" ~ "159",
+    loc == "HR" & qid == "639" & Tag == "565" ~ "556",
+    loc == "HR" & qid == "660" & Tag == "17" ~ "7",
+    loc == "HR" & qid == "660" & Tag == "24" ~ "27",
+    # loc == "HR" & qid == "660" & Date == "2026-6-24" & Tag == "41" ~ "11",
+    loc == "HR" & qid == "672" & Tag == "79" ~ "29",
+    loc == "HR" & qid == "672" & Tag == "33" ~ "23",
+    loc == "HR" & qid == "672" & Tag == "30" ~ "20",
+    loc == "HR" & qid == "683" & Tag == "29" ~ "24",
+    loc == "HR" & qid == "687" & Tag == "594" ~ "595",
+    loc == "HR" & qid == "71" & Tag == "809" ~ "869",
+    loc == "HR" & qid == "80" & Tag == "120" ~ "126",
+    loc == "HR" & qid == "80" & Tag == "104" ~ "164",
+    loc == "HR" & qid == "80" & Tag == "765" ~ "763",
+    loc == "HR" & qid == "891" & Tag == "777" ~ "977",
+    loc == "HR" & qid == "94" & Tag == "107" ~ "167",
+    loc == "HR" & qid == "96" & Tag == "108" ~ "168",
+    .default = Tag)) %>% 
+  filter(Tag != "574") %>% # 623 resolution
+  filter(Tag != "999") %>% # 660 resolution
+  mutate(filter_c = case_when(qid == "624" & Date == "2026-06-23" ~ "take", # fixing 624 issue
+    .default = "leave")) %>% 
+  filter(filter_c == "leave") %>% 
+  select(-8) %>% 
+  filter(qid %in% HR_List) %>% 
+  group_by(qid) %>% 
+  summarise(tags = list(unique(Tag))) %>% 
+  filter(lengths(tags) > 15) 
+#   unnest(tags) %>%
+# #   filter(qid == "105") %>% 
+#   arrange(qid) %>% 
+#   write.csv("HR_broken_tags.csv", row.names = FALSE)
+
+###
+##
+#
+#.  MC
+
+# extract 624 bc some are incorrect qid
+
+
+MC_broke_629 <- HR_tagRepair %>% 
+  filter(qid == "624") %>% 
+  mutate(filter_c = case_when(Date == "2026-06-23" ~ "take")) %>% 
+  filter(filter_c == "take") %>% 
+  mutate(qid = "629",
+    loc = "MC") %>% 
+  select(-8) %>% 
+  print()
+
+MC_tagRepair <- step1_tagRepair %>% 
+  filter(loc == "MC")
+
+MC_List <- unique(MC_tagRepair$qid)
+
+MC_tagRep_bind <- 
+  rbind(MC_tagRepair, MC_broke_629)
+
+MC_tagRep_bind %>%  
+  mutate(Tag = case_when(loc == "MC" & qid == "13" & Tag == "220" ~ "230",
+    loc == "MC" & qid == "13" & Tag == "477" ~ "877",
+    loc == "MC" & qid == "17" & Tag == "692" ~ "290",
+    loc == "MC" & qid == "17" & Tag == "256" ~ "656",
+    loc == "MC" & qid == "218" & Tag == "210" ~ "201",
+    loc == "MC" & qid == "218" & Tag == "102" ~ "201",
+    loc == "MC" & qid == "258" & Tag == "258" ~ "251",
+    loc == "MC" & qid == "259" & Tag == "226" ~ "266",
+    loc == "MC" & qid == "259" & Tag == "203" ~ "293",
+    loc == "MC" & qid == "263" & Tag == "353" ~ "853",
+    loc == "MC" & qid == "285" & Tag == "557" ~ "257",
+    loc == "MC" & qid == "285" & Tag == "279" ~ "271",
+    loc == "MC" & qid == "267" & Tag == "476" ~ "953",
+    loc == "MC" & qid == "458" & Tag == "667" ~ "67",
+    loc == "MC" & qid == "458" & Tag == "460" ~ "400",
+    loc == "MC" & qid == "610" & Tag == "707" ~ "767",
+    loc == "MC" & qid == "611" & Tag == "638" ~ "689",
+    loc == "MC" & qid == "629" & Tag == "851" ~ "651",
+    loc == "MC" & qid == "629" & Tag == "299" ~ "662",
+    loc == "MC" & qid == "634" & Tag == "662" ~ "602",
+    loc == "MC" & qid == "730" & Tag == "356" ~ "357",
+    loc == "MC" & qid == "81" & Tag == "43" ~ "143",
+    loc == "MC" & qid == "81" & Tag == "106" ~ "166",
+    loc == "MC" & qid == "81" & Tag == "112" ~ "211",
+    loc == "MC" & qid == "81" & Tag == "233" ~ "235",
+    loc == "MC" & qid == "416" & Tag == "184" ~ "484",
+    .default = Tag)) %>% 
+  filter(!(Date == "2026-07-17" & Tag == "55")) %>% 
+  filter(!(Date == "2026-06-30" & Tag == "247")) %>% 
+  mutate(qid = case_when(
+    qid == "457" & Tag == "186" ~ "416",
+    qid == "457" & Tag == "416" ~ "416",
+    qid == "457" & Tag == "451" ~ "416",
+    qid == "457" & Tag == "455" ~ "416",
+    qid == "457" & Tag == "463" ~ "416",
+    qid == "457" & Tag == "469" ~ "416",
+    qid == "457" & Tag == "471" ~ "416",
+    qid == "457" & Tag == "478" ~ "416",
+    qid == "457" & Tag == "484" ~ "416",
+    qid == "457" & Tag == "600" ~ "416",
+    qid == "457" & Tag == "634" ~ "416",
+    qid == "457" & Tag == "661" ~ "416",
+    .default = qid
+  )) %>% 
+  filter(qid %in% MC_List) %>% 
+  group_by(qid) %>% 
+  summarise(tags = list(unique(Tag))) %>% 
+  filter(lengths(tags) > 15) 
+#   unnest(tags) %>%
+# #  filter(qid == "105") %>% 
+#   arrange(qid) %>% 
+# write.csv("MC_broken_tags.csv", row.names = FALSE)
+
+# Implementing the changes at the whole-df level now :
+# 11/12/26
+
+master_qid_list <- unique(cleaned_df$qid)
+
+
+tag_revised_df <- cleaned_df  %>% 
+  mutate(Date = case_when(Date == "4/20/26" & qid == 71 ~ "4/10/26", 
+.default = Date)) %>% 
+  mutate(Date = str_replace(Date, "/26$", "/2026")) %>% 
+  mutate(Date = as.Date(Date, format = "%m/%d/%Y")) %>% 
+  mutate(Tag = case_when(loc == "IR" & qid == "105" & Tag == "71" ~ "79",# IR
+    loc == "IR" & qid == "105" & Tag == "689" ~ "698",
+    loc == "IR" & qid == "29" & Tag == "51" ~ "15",
+    loc == "IR" & qid == "3" & Tag == "35" ~ "37",
+    loc == "IR" & qid == "302" & Tag == "273" ~ "278",
+    loc == "IR" & qid == "320" & Tag == "284" ~ "384",
+    loc == "IR" & qid == "36" & Tag == "807" ~ "897",
+    loc == "IR" & qid == "36" & Tag == "68" ~ "89",
+    loc == "IR" & qid == "433" & Tag == "29" ~ "62",
+    loc == "IR" & qid == "433" & Tag == "253" ~ "252",
+    loc == "IR" & qid == "433" & Tag == " " ~ "658",
+    loc == "IR" & qid == "620" & Tag == "892" ~ "268",
+    loc == "IR" & qid == "626" & Tag == "1" ~ "9",
+    loc == "IR" & qid == "652" & Tag == "19" ~ "49",
+    loc == "IR" & qid == "838" & Tag == "270" ~ "278",
+    loc == "IR" & qid == "899" & Tag == "14" ~ "24",
+    loc == "IR" & qid == "98" & Tag == "61" ~ "6",
+    loc == "IR" & qid == "989" & Tag == "71" ~ "7",
+    .default = Tag)) %>% 
+  filter(Tag != "na") %>% 
+  mutate(Tag = case_when(loc == "HR" & qid == "6" & Tag == "6" ~ "9",  # HR
+    loc == "HR" & qid == "6" & Tag == "154" ~ "159",
+    loc == "HR" & qid == "639" & Tag == "565" ~ "556",
+    loc == "HR" & qid == "660" & Tag == "17" ~ "7",
+    loc == "HR" & qid == "660" & Tag == "24" ~ "27",
+    loc == "HR" & qid == "660" & Date == "2026-6-24" & PH == '23' & Tag == "41" ~ "11",
+    loc == "HR" & qid == "672" & Tag == "79" ~ "29",
+    loc == "HR" & qid == "672" & Tag == "33" ~ "23",
+    loc == "HR" & qid == "672" & Tag == "30" ~ "20",
+    loc == "HR" & qid == "683" & Tag == "29" ~ "24",
+    loc == "HR" & qid == "687" & Tag == "594" ~ "595",
+    loc == "HR" & qid == "71" & Tag == "809" ~ "869",
+    loc == "HR" & qid == "80" & Tag == "120" ~ "126",
+    loc == "HR" & qid == "80" & Tag == "104" ~ "164",
+    loc == "HR" & qid == "80" & Tag == "765" ~ "763",
+    loc == "HR" & qid == "891" & Tag == "777" ~ "977",
+    loc == "HR" & qid == "94" & Tag == "107" ~ "167",
+    loc == "HR" & qid == "96" & Tag == "108" ~ "168",
+    .default = Tag)) %>% 
+  filter(Tag != "574") %>% # 623 resolution
+  filter(Tag != "999") %>% # 660 resolution
+  mutate(qid = case_when(loc == "HR" & qid == "624" & Date == "2026-06-23" ~ "629", # fixing 624 issue
+    .default = qid)) %>% 
+  mutate(loc = case_when(loc == "HR" & qid == '629' & Date == "2026-06-23" ~ "MC",
+    .default = loc)) %>% # fixing 624 issue
+  mutate(Tag = case_when(loc == "MC" & qid == "13" & Tag == "220" ~ "230", # MC 
+    loc == "MC" & qid == "13" & Tag == "477" ~ "877",
+    loc == "MC" & qid == "17" & Tag == "692" ~ "290",
+    loc == "MC" & qid == "17" & Tag == "256" ~ "656",
+    loc == "MC" & qid == "218" & Tag == "210" ~ "201",
+    loc == "MC" & qid == "218" & Tag == "102" ~ "201",
+    loc == "MC" & qid == "258" & Tag == "258" ~ "251",
+    loc == "MC" & qid == "259" & Tag == "226" ~ "266",
+    loc == "MC" & qid == "259" & Tag == "203" ~ "293",
+    loc == "MC" & qid == "263" & Tag == "353" ~ "853",
+    loc == "MC" & qid == "285" & Tag == "557" ~ "257",
+    loc == "MC" & qid == "285" & Tag == "279" ~ "271",
+    loc == "MC" & qid == "267" & Tag == "476" ~ "953",
+    loc == "MC" & qid == "458" & Tag == "667" ~ "67",
+    loc == "MC" & qid == "458" & Tag == "460" ~ "400",
+    loc == "MC" & qid == "610" & Tag == "707" ~ "767",
+    loc == "MC" & qid == "611" & Tag == "638" ~ "689",
+    loc == "MC" & qid == "629" & Tag == "851" ~ "651",
+    loc == "MC" & qid == "629" & Tag == "299" ~ "662",
+    loc == "MC" & qid == "634" & Tag == "662" ~ "602",
+    loc == "MC" & qid == "730" & Tag == "356" ~ "357",
+    loc == "MC" & qid == "81" & Tag == "43" ~ "143",
+    loc == "MC" & qid == "81" & Tag == "106" ~ "166",
+    loc == "MC" & qid == "81" & Tag == "112" ~ "211",
+    loc == "MC" & qid == "81" & Tag == "233" ~ "235",
+    loc == "MC" & qid == "416" & Tag == "184" ~ "484",
+    .default = Tag)) %>% 
+  filter(!(Date == "2026-07-17" & Tag == "55")) %>% 
+  filter(!(Date == "2026-06-30" & Tag == "247")) %>% 
+  mutate(qid = case_when(
+    qid == "457" & Tag == "186" ~ "416",
+    qid == "457" & Tag == "416" ~ "416",
+    qid == "457" & Tag == "451" ~ "416",
+    qid == "457" & Tag == "455" ~ "416",
+    qid == "457" & Tag == "463" ~ "416",
+    qid == "457" & Tag == "469" ~ "416",
+    qid == "457" & Tag == "471" ~ "416",
+    qid == "457" & Tag == "478" ~ "416",
+    qid == "457" & Tag == "484" ~ "416",
+    qid == "457" & Tag == "600" ~ "416",
+    qid == "457" & Tag == "634" ~ "416",
+    qid == "457" & Tag == "661" ~ "416",
+    .default = qid
+  )) %>% 
+  filter(!(loc == "MC" & Date == "2026-4-11" & qid == "457" & Tag == "467" & PH == "8")) %>% 
+    filter(!(loc == "MC" & qid == "13" & Tag == "798" & PH == "62"))
+  # filter(qid %in% master_qid_list) %>% 
+  # group_by(qid) %>% 
+  # summarise(tags = list(unique(Tag))) %>% 
+  # filter(lengths(tags) > 15) 
+# %>% 
+#     unnest(tags) %>%
+#   arrange(qid) %>% 
+# write.csv("MASTER_broken_tags.csv", row.names = FALSE)
+
+# completing the df
+
+tags_complete <- tag_revised_df %>% 
+  mutate(row_id = row_number(), .by = c(Date, qid)) %>% 
+  relocate(row_id) %>% 
+  group_by(Date, qid) %>% 
+  complete(row_id = 1:15) %>% 
+  ungroup()%>%  
+  group_by(Date, qid) %>% 
+  fill(Tag, loc, band, el, rep, .direction = 'down') %>% 
+  ungroup() %>% 
+  select(-row_id) %>% 
+  group_by(loc, qid, Tag, rep, band, el) %>% 
+  complete(Date) %>% 
+  filter(D1_p < 400 | is.na(D1_p))
+
+colnames(tags_complete)
+
+final_cp <- tags_complete %>% 
+  select(-c("id", "test", "test_ok", "test_pieces", "test_remainder", "d6_splitter", "d6_splitter_ok", "d6_splitter_pieces", "d6_splitter_remainder",
+    "d7_splitter", "d7_splitter_ok", "d7_splitter_pieces", "d7_splitter_remainder", "EFN.score")) %>% 
+  relocate(Date, loc, , band, qid, Tag, rep, el, el_band)
+
+# Does not change anything 
+# tag_revised_df %>% 
+#   expand(nesting(qid, Tag, Date, loc)) %>% 
+#   left_join(tag_revised_df, by = c('qid', 'Tag', 'Date', 'loc'))
+
+# tags_complete
+
+# # Are there any NAs where there should not be?
+# # splitting by loc to take a closer look 
+# hr_test <- tags_complete %>% 
+#   filter(loc == "HR") %>% 
+#   filter(is.na(D1_p))
+
+# ir_test <- tags_complete %>% 
+#   filter(loc == "IR") %>% 
+#   filter(D1_p == "Dead")
+
+# # %>% 
+#   filter(is.na(D1_p))
+
+# return 
+
+return(list(
+  tags_complete = tags_complete,
+  final_cp = final_cp,
+  e_df = e_df,
+  max_value_df = max_value_df))
+  
+#   tags_complete <- as_tibble(tags_complete)
+# return(tags_complete)
+# final_cp <- as_tibble(final_cp)
+# return(final_cp)
+# e_df <- as_tibble(e_df)
+# return(e_df)
+# max_value_df <- as_tibble(max_value_df)
+# return(max_value_df)
+
+
+}
