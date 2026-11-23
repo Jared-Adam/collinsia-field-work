@@ -2,6 +2,7 @@
 library(tidyverse)
 library(ggridges)
 library(ggh4x)
+library(DescTools)
 
 # DFs ####
 final_cp
@@ -12,19 +13,30 @@ tags_complete
 
 # damage vis ####
 
+
+dmg_plot_df <- final_cp %>% 
+  rename("Chewing damage (%)" = D1_p,
+    "Piercing/sucking damage (%)" = D2_p,
+    "Adult beetle damage (%)" = D3_p,
+    "Beetle leaf miner (%)" = D6_p,
+    "Fly leaf miner (%)" = D7_p)
+
 dmg_plots_raw <- function(data, x_col, y_col){
 
-ggplot(final_cp, aes(x = el, y = .data[[y_col]]))+
+ggplot(dmg_plot_df, aes(x = el, y = .data[[y_col]]))+
   geom_smooth(method = 'gam', formula = y ~ s (x, k = 4))+
-  geom_point()+
+  geom_point(size = 2)+
   theme_bw()+
-  ylim(0,100)
+  labs(title = paste(y_col),
+    x = "Elevation (m)")+
+  theme(title = element_text(size = 18),
+    axis.text = element_text(size = 16))
 }
 
-y_variables = c('D1_p', 'D2_p', 'D3_p', 'D6_p', 'D7_p')
+y_variables = c('Chewing damage (%)', 'Piercing/sucking damage (%)', 'Adult beetle damage (%)', 'Beetle leaf miner (%)', 'Fly leaf miner (%)')
 
 
-raw_damage_plots <- map(y_variables, ~ dmg_plots_raw(data = final_cp, x_col = el, y_col = .x))
+raw_damage_plots <- map(y_variables, ~ dmg_plots_raw(data = dmg_plot_df, x_col = el, y_col = .x))
 raw_damage_plots[[1]]
 
 walk2(y_variables, raw_damage_plots, 
@@ -32,6 +44,8 @@ walk2(y_variables, raw_damage_plots,
 width = 8,
 height = 8,
 unit = 'in'))
+
+
 
 
 dmg_plots_gam <- function(data, x_col, y_col){
@@ -282,3 +296,104 @@ y = "Mean percent damage",
 x = "Elevation (m)")+
   theme_bw()
 
+
+
+# GINI 
+ ?Gini
+
+gini_df <- final_cp %>% 
+  filter(!is.na(D1_p))
+
+Gini(gini_df$D2_p)
+
+# gini by elevation 
+
+# average damage 
+gini_df %>% 
+  group_by(el) %>%
+  mutate(avg_p = (D1_p + D2_p + D3_p + D6_p + D7_p)/5) %>% 
+  relocate(el, avg_p) %>% 
+  summarise(Gini = Gini(avg_p)) %>% 
+ggplot(aes(el, Gini))+
+  geom_point()+
+  geom_smooth(method = 'lm')+
+  theme_bw()+
+  labs(title = "Gini of average damage", 
+    x = "Elevation (m)", 
+    y = "Gini")+
+  theme(title = element_text(size = 20),
+    axis.text = element_text(size = 16))
+
+
+# pivot long to do all dmg 
+dmg_gini <- gini_df %>% 
+  pivot_longer(c("D1_p", "D2_p", "D3_p", "D6_p", "D7_p"),
+    names_to = "dmg_type",
+    values_to = "per") %>% 
+  relocate(Date, loc, band, qid, rep, el, dmg_type, per) %>% 
+  select(1:8) %>% 
+  group_by(el, dmg_type) %>% 
+  summarise(gini = Gini(per, na.rm = TRUE))
+
+ggplot(dmg_gini, aes(x = el, y = gini))+
+  geom_point()+
+  facet_wrap(~dmg_type) +
+  geom_smooth(method = 'lm')+
+  theme_bw()+
+  labs(title = "Gini by dammage type",
+    x = "Elevation (m)",
+    y = "Gini")+
+  theme(title = element_text(size = 20), 
+    axis.text = element_text(size = 16))
+
+
+
+# df for fxn
+
+gini_test <- gini_df %>% 
+  summarise("Gini-chewing damage" = Gini(D1_p),
+    "Gini-piercing/sucking" = Gini(D2_p),
+    "Gini-adult beetle" = Gini(D3_p),
+    "Gini-beetle mines" = Gini(D6_p),
+    "Gini-fly mines" = Gini(D7_p))
+
+
+gini_fxn <- function(y_col, x_col, data) {
+
+ggplot(gini_test, aes(x = el, y = .data[[y_col]]))+
+  geom_point(size = 2)+
+  geom_smooth(method = 'gam', formula = y ~ s (x, k =4))+
+  theme_bw()+
+  labs(title = paste(y_col),
+    x = "Elevation (m)")+
+  theme(title = element_text(size = 18),
+   axis.text = element_text(size = 16) 
+    
+    )
+}
+  
+y_variables = c('Gini-chewing damage','Gini-piercing/sucking', 'Gini-adult beetle', 'Gini-beetle mines', 'Gini-fly mines')
+gini_dmg_type_plots <- map(y_variables, ~ gini_fxn(data = gini_test, x_col = el, y_col = .x))
+gini_dmg_type_plots[[1]]
+
+raw_damage_plots[[1]]+gini_dmg_type_plots[[1]]+
+  plot_annotation(title = "Chewing damage percent and Gini index by elevation",
+    theme = theme(plot.title = element_text(size = 24)))
+
+raw_damage_plots[[2]]+gini_dmg_type_plots[[2]]+
+  plot_annotation(title = "Piercing/ sucking damage percent and Gini index by elevation",
+    theme = theme(plot.title = element_text(size = 24)))
+
+raw_damage_plots[[3]]+gini_dmg_type_plots[[3]]+
+  plot_annotation(title = "Adult beetle damage percent and Gini index by elevation",
+    theme = theme(plot.title = element_text(size = 24)))
+
+raw_damage_plots[[4]]+gini_dmg_type_plots[[4]]+
+  plot_annotation(title = "Beelte leaf miner damage percent and Gini index by elevation",
+    theme = theme(plot.title = element_text(size = 24)))
+
+raw_damage_plots[[5]]+gini_dmg_type_plots[[5]]+
+  plot_annotation(title = "Fly leaf miner damage percent and Gini index by elevation",
+    theme = theme(plot.title = element_text(size = 24)))
+
+?plot_annotation
