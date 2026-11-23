@@ -14,17 +14,3 @@ e_df <- dfs$e_df
 final_cp <- dfs$final_cp
 
 
-# old plot I saved here ####
-# plot of the max means... Why?
-e_df %>% 
-  ggplot(aes(x = el, y = mean))+
-  geom_point(size = 2)+
-  facet_grid(cols = vars(dmg_type))+
-  xlim(1500,3000)+
-  ylim(0,15)+
-  geom_smooth(method = 'gam',
-formula = y~s(x, k=4))+
-  labs(title = "Mean damage percent x damage type",
-y = "Mean percent damage",
-x = "Elevation (m)")+
-  theme_bw()

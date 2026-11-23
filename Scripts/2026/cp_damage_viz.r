@@ -1,16 +1,20 @@
 # packages ####
 library(tidyverse)
 library(ggridges)
+library(ggh4x)
 
 # DFs ####
-labeled_df
-cleaned_df
+final_cp
+max_value_df
+e_df
+tags_complete
+
 
 # damage vis ####
 
 dmg_plots_raw <- function(data, x_col, y_col){
 
-ggplot(cleaned_df, aes(x = el, y = .data[[y_col]]))+
+ggplot(final_cp, aes(x = el, y = .data[[y_col]]))+
   geom_smooth(method = 'gam', formula = y ~ s (x, k = 4))+
   geom_point()+
   theme_bw()+
@@ -20,7 +24,7 @@ ggplot(cleaned_df, aes(x = el, y = .data[[y_col]]))+
 y_variables = c('D1_p', 'D2_p', 'D3_p', 'D6_p', 'D7_p')
 
 
-raw_damage_plots <- map(y_variables, ~ dmg_plots_raw(data = cleaned_df, x_col = el, y_col = .x))
+raw_damage_plots <- map(y_variables, ~ dmg_plots_raw(data = final_cp, x_col = el, y_col = .x))
 raw_damage_plots[[1]]
 
 walk2(y_variables, raw_damage_plots, 
@@ -32,7 +36,7 @@ unit = 'in'))
 
 dmg_plots_gam <- function(data, x_col, y_col){
 
-  ggplot(cleaned_df, aes(x = el, y = .data[[y_col]]))+
+  ggplot(final_cp, aes(x = el, y = .data[[y_col]]))+
     geom_smooth(method = 'gam', formula = y ~ s (x, k=4))+
     theme_bw()
     #labs(title = paste("Relationship between", x_col, "and", y_col))
@@ -40,7 +44,7 @@ dmg_plots_gam <- function(data, x_col, y_col){
 y_variables = c('D1_p', 'D2_p', 'D3_p', 'D6_p', 'D7_p')
 
 
-gam_damage_plots <- map(y_variables, ~ dmg_plots_gam(data = cleaned_df, x_col = el, y_col = .x))
+gam_damage_plots <- map(y_variables, ~ dmg_plots_gam(data = final_cp, x_col = el, y_col = .x))
 gam_damage_plots
 
 walk2(y_variables, gam_damage_plots, 
@@ -51,7 +55,7 @@ unit = 'in'))
 
 # plot of average damage type 
 
-wide_sum <- cleaned_df %>% 
+wide_sum <- final_cp %>% 
   group_by(loc, band, el) %>% 
   summarise(across(c('D1_p', 'D2_p', 'D3_p', 'D6_p', 'D7_p'), mean, na.rm = TRUE)) %>% 
   drop_na() %>% 
@@ -76,9 +80,9 @@ unit = 'in'))
 
 # long wise for total damage 
 ## FOR AYA 10-8-2026
-df_for_avg_plot <- cleaned_df %>% 
+df_for_avg_plot <- final_cp %>% 
   group_by(loc, band, el) %>% 
-  select(1:12) %>% 
+  # select(1:12) %>% 
   pivot_longer(c('D1_p', 'D2_p', 'D3_p', 'D6_p', 'D7_p'),
 names_to = "dmg_type",
 values_to = "dmg_p") %>% 
@@ -108,12 +112,12 @@ ggsave("FinalAvgDamage.jpg", plot = get_last_plot(), height = 10, width = 12, un
 
 # new wrangling? #### 
 
-cleaned_df
+final_cp
 wide_sum
 
-long_df <- cleaned_df %>% 
+long_df <- final_cp %>% 
   group_by(loc, band, el) %>% 
-  select(1:12) %>% 
+  select(1:13) %>% 
   pivot_longer(c('D1_p', 'D2_p', 'D3_p', 'D6_p', 'D7_p'),
 names_to = "dmg_type",
 values_to = "dmg_p") %>% 
@@ -175,9 +179,9 @@ ggsave("FinalBYDamageType.jpg", plot = get_last_plot(), height = 10, width = 14,
 
 # grouped by elevation df
 
-long_mean_df <- cleaned_df %>% 
+long_mean_df <- final_cp %>% 
   group_by(loc, band, el) %>% 
-  select(1:12) %>% 
+  select(1:13) %>% 
   pivot_longer(c('D1_p', 'D2_p', 'D3_p', 'D6_p', 'D7_p'),
 names_to = "dmg_type",
 values_to = "dmg_p") %>% 
@@ -245,7 +249,7 @@ fill = "Elevation zone")+
 # max damage values ####
   
 # extract the max damage from each plant 
-cleaned_df %>% # quick vis with the wide df, switching to long
+final_cp %>% # quick vis with the wide df, switching to long
   group_by(Tag, el, loc) %>% 
   summarise(D1_value = max(D1_p, na.rm = TRUE),
 D2_value = max(D2_p, na.rm = TRUE),
@@ -257,38 +261,12 @@ D7_value = max(D7_p, na.rm = TRUE)) %>%
   ggplot(aes(x = el, y = D1_value)) +
   geom_point()
 
-cleaned_df %>% # just looking at the spread
+final_cp %>% # just looking at the spread
   group_by(el) %>% 
   summarise(max = max(el, na.rm = TRUE)) %>% 
   print(n = Inf)
 
-max_value_df <- cleaned_df %>% # new df for the max values 
-  group_by(Tag, el, loc, band) %>% 
-  summarise(D1_value = max(D1_p, na.rm = TRUE),
-D2_value = max(D2_p, na.rm = TRUE),
-D3_value = max(D3_p, na.rm = TRUE),
-D6_value = max(D6_p, na.rm = TRUE),
-D7_value = max(D7_p, na.rm = TRUE)) %>%
-  ungroup() %>% 
-  na.omit() %>% 
-  pivot_longer(
-    c('D1_value', 'D2_value', 'D3_value', 'D6_value', 'D7_value'),
-    names_to = 'dmg_type',
-    values_to = 'max_p'
-  ) %>% 
-  mutate(Tag = case_when(
-    Tag == " " ~ 'X', .default = Tag
-  )) %>% 
-  mutate(Tag = as.factor(Tag))  
 
-# in the above math there is an issue somewhere that is causing some -Inf values. IDK why
-max_value_df %>% 
-  filter(max_p == -Inf)
-
-e_df <- max_value_df %>% 
-  group_by(band, el, dmg_type) %>% 
-  filter(max_p != -Inf) %>% 
-  summarise(mean = mean(max_p, na.rm = TRUE)) 
 
 # plot of the max means... Why?
 e_df %>% 
