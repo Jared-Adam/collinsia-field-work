@@ -1,4 +1,4 @@
-# broken code from the mortality cleaning 
+# broken code from the mortality cleaning ####
 
 
 # Through some cleaning, I discovered some date issues
@@ -114,5 +114,87 @@ stop
 #   filter(qid == 71) %>% 
 #   filter(Date == "4/10/26" | Date == "4/20/26") %>% 
 #   print(n = Inf)
+
+# From the Gini df ####
+
+
+
+# plotting functions with a binned date 
+
+# Bin by time ###
+
+dates_df <- as_tibble(unique(gini_df$Date))
+dates_df %>% 
+  arrange(value) %>% 
+  print(n = Inf)
+# 4,5,6,7,8
+
+date_bin_df <- gini_df %>% 
+  mutate(month_num = month(Date),
+  date_bin = case_when(
+    month_num %in% c(4) ~ "Early",
+    month_num %in% c(5,6) ~ "Mid", 
+    month_num %in% c(7,8) ~ "Late"
+  )) %>% 
+  group_by(qid, el, date_bin) %>% 
+  summarise("Gini-chewing damage" = Gini(D1_p),
+    "Gini-piercing/sucking" = Gini(D2_p),
+    "Gini-adult beetle" = Gini(D3_p),
+    "Gini-beetle mines" = Gini(D6_p),
+    "Gini-fly mines" = Gini(D7_p)) %>% 
+  mutate(date_bin = as.factor(date_bin),
+    date_bin = fct_relevel(date_bin, "Early", "Mid", "Late")
+)
+
+# ggplot(date_bin_df, aes( x = el, y = "Gini-chewing damage"))+
+#   facet_wrap(~date_bin)+
+#   geom_point(size = 2)+
+#   geom_smooth(method = 'gam', formula = y ~ s (x, k=4))
+
+
+gini_date_fxn <- function(y_col, x_col, data) {
+
+ggplot(date_bin_df, aes(x = el, y = .data[[y_col]]))+
+  facet_wrap(~date_bin)+
+  geom_point(size = 2)+
+  geom_smooth(method = 'gam', formula = y ~ s (x, k =4))+
+  theme_bw()+
+  labs(title = paste(y_col),
+    x = "Elevation (m)")+
+  theme(title = element_text(size = 18),
+   axis.text = element_text(size = 16),
+   strip.text = element_text(size = 16)
+    
+    )+
+  ylim(0,1)
+}
+  
+y_variables = c('Gini-chewing damage','Gini-piercing/sucking', 'Gini-adult beetle', 'Gini-beetle mines', 'Gini-fly mines')
+gini_date_plots <- map(y_variables, ~ gini_date_fxn(data = date_bin_df, x_col = el, y_col = .x))
+gini_date_plots[[3]]
+
+# Damage binned by time 
+final_cp %>% 
+  select(1:13)%>% 
+  mutate(month_num = month(Date),
+  date_bin = case_when(
+    month_num %in% c(4) ~ "Early",
+    month_num %in% c(5,6) ~ "Mid", 
+    month_num %in% c(7,8) ~ "Late"
+  )) %>%  
+  mutate(date_bin = as.factor(date_bin),
+    date_bin = fct_relevel(date_bin, "Early", "Mid", "Late")) %>% 
+  group_by(qid, el, date_bin)
+
+
+
+
+
+
+
+
+# new ####
+
+
 
 

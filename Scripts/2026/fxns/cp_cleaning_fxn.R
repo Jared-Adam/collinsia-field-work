@@ -1,6 +1,8 @@
   
 cp_clean_function <- function() {
 
+
+
 # data #####
 
 cp.dir <- here('Data/2026', '2026-5-26_Cp_obs.csv')
@@ -752,13 +754,225 @@ final_cp <- tags_complete %>%
 # # %>% 
 #   filter(is.na(D1_p))
 
-# return 
+# Hierarchy dfs ####
+# which do I need?
+  # total = final_df
+  # qid level = qid_df
+  # plant level = plant_df
+    # ALL with informative names and fewer non-sense columns 
+  
+full_data_df <- final_cp 
+
+# qid level joining of mean, max, sd, and gini 
+
+qid_max <- full_data_df %>% 
+  group_by(qid) %>% 
+  summarise(max_1 = max(D1_p, na.rm= TRUE),
+    max_2 = max(D2_p, na.rm= TRUE), 
+    max_3 = max(D3_p, na.rm= TRUE), 
+    max_6 = max(D6_p, na.rm= TRUE),
+    max_7 = max(D7_p, na.rm= TRUE), 
+    el = first(el))%>% 
+  relocate(qid, el)
+
+qid_mean <- full_data_df %>% 
+  group_by(qid) %>% 
+  summarise(mean_1 = mean(D1_p, na.rm= TRUE),
+    mean_2 = mean(D2_p, na.rm= TRUE), 
+    mean_3 = mean(D3_p, na.rm= TRUE), 
+    mean_6 = mean(D6_p, na.rm= TRUE),
+    mean_7 = mean(D7_p, na.rm= TRUE), 
+    el = first(el))%>% 
+  relocate(qid, el)
+  
+qid_sd <- full_data_df %>% 
+  group_by(qid) %>% 
+  summarise(sd_1 = sd(D1_p, na.rm= TRUE),
+    sd_2 = sd(D2_p, na.rm= TRUE), 
+    sd_3 = sd(D3_p, na.rm= TRUE), 
+    sd_6 = sd(D6_p, na.rm= TRUE),
+    sd_7 = sd(D7_p, na.rm= TRUE), 
+    el = first(el))%>% 
+  relocate(qid, el)
+  
+qid_gini<- full_data_df %>% 
+  group_by(qid) %>% 
+  summarise(gini_1 = Gini(D1_p, na.rm= TRUE),
+    gini_2 = Gini(D2_p, na.rm= TRUE), 
+    gini_3 = Gini(D3_p, na.rm= TRUE), 
+    gini_6 = Gini(D6_p, na.rm= TRUE),
+    gini_7 = Gini(D7_p, na.rm= TRUE), 
+    el = first(el))%>% 
+  relocate(qid, el)
+  
+qid_df <- bind_cols(qid_max, qid_mean, qid_gini, qid_sd, .name_repair = "minimal") 
+qid_df <- qid_df[!duplicated(names(qid_df))]
+
+
+# plant-level dfs
+  
+tag_max <- full_data_df %>% 
+  group_by(Tag) %>% 
+  summarise(max_1 = max(D1_p, na.rm= TRUE),
+    max_2 = max(D2_p, na.rm= TRUE), 
+    max_3 = max(D3_p, na.rm= TRUE), 
+    max_6 = max(D6_p, na.rm= TRUE),
+    max_7 = max(D7_p, na.rm= TRUE), 
+    el = first(el))%>% 
+  relocate(Tag, el)
+
+tag_mean <- full_data_df %>% 
+  group_by(Tag) %>% 
+  summarise(mean_1 = mean(D1_p, na.rm= TRUE),
+    mean_2 = mean(D2_p, na.rm= TRUE), 
+    mean_3 = mean(D3_p, na.rm= TRUE), 
+    mean_6 = mean(D6_p, na.rm= TRUE),
+    mean_7 = mean(D7_p, na.rm= TRUE), 
+    el = first(el))%>% 
+  relocate(Tag, el)
+  
+tag_sd <- full_data_df %>% 
+  group_by(Tag) %>% 
+  summarise(sd_1 = sd(D1_p, na.rm= TRUE),
+    sd_2 = sd(D2_p, na.rm= TRUE), 
+    sd_3 = sd(D3_p, na.rm= TRUE), 
+    sd_6 = sd(D6_p, na.rm= TRUE),
+    sd_7 = sd(D7_p, na.rm= TRUE), 
+    el = first(el))%>% 
+  relocate(Tag, el)
+  
+tag_gini<- full_data_df %>% 
+  group_by(Tag) %>% 
+  summarise(gini_1 = Gini(D1_p, na.rm= TRUE),
+    gini_2 = Gini(D2_p, na.rm= TRUE), 
+    gini_3 = Gini(D3_p, na.rm= TRUE), 
+    gini_6 = Gini(D6_p, na.rm= TRUE),
+    gini_7 = Gini(D7_p, na.rm= TRUE), 
+    el = first(el))%>% 
+  relocate(Tag, el)
+  
+tag_df <- bind_cols(tag_max, tag_mean, tag_gini, tag_sd, .name_repair = "minimal") 
+tag_df <- tag_df[!duplicated(names(tag_df))]
+
+
+  
+  
+  
+  
+  
+  
+  
+# Ignoring the for now as well, I am not sure if I need these at present: 
+  # I will need df's with raw metrics, but i have the main df and I can group by  what is needed when I get there?
+  
+# average damage 
+# gini_df %>% 
+#   group_by(el) %>%
+#   mutate(avg_p = (D1_p + D2_p + D3_p + D6_p + D7_p)/5) %>% 
+#   relocate(el, avg_p) %>% 
+#   summarise(Gini = Gini(avg_p)) %>% 
+# ggplot(aes(el, Gini))+
+#   geom_point()+
+#   geom_smooth(method = 'lm')+
+#   theme_bw()+
+#   labs(title = "Gini of average damage", 
+#     x = "Elevation (m)", 
+#     y = "Gini")+
+#   theme(title = element_text(size = 20),
+#     axis.text = element_text(size = 16))
+
+
+# # pivot long to do all dmg 
+# dmg_gini <- gini_df %>% 
+#   pivot_longer(c("D1_p", "D2_p", "D3_p", "D6_p", "D7_p"),
+#     names_to = "dmg_type",
+#     values_to = "per") %>% 
+#   relocate(Date, loc, band, qid, rep, el, dmg_type, per) %>% 
+#   select(1:8) %>% 
+#   group_by(el, qid, dmg_type) %>% 
+#   summarise(gini = Gini(per, na.rm = TRUE))
+
+# ggplot(dmg_gini, aes(x = el, y = gini))+
+#   geom_point()+
+#   facet_wrap(~dmg_type) +
+#   geom_smooth(method = 'lm')+
+#   theme_bw()+
+#   labs(title = "Gini by dammage type",
+#     x = "Elevation (m)",
+#     y = "Gini")+
+#   theme(title = element_text(size = 20), 
+#     axis.text = element_text(size = 16))
+
+# # Bin by time ## THIS IS NOT going to used be for
+  # We need to come up with a better way to think about time before I can use this
+    # bins are not adequate 
+
+# dates_df <- as_tibble(unique(gini_df$Date))
+# dates_df %>% 
+#   arrange(value) %>% 
+#   print(n = Inf)
+# # 4,5,6,7,8
+
+# date_bin_df <- gini_df %>% 
+#   mutate(month_num = month(Date),
+#   date_bin = case_when(
+#     month_num %in% c(4) ~ "Early",
+#     month_num %in% c(5,6) ~ "Mid", 
+#     month_num %in% c(7,8) ~ "Late"
+#   )) %>% 
+#   group_by(qid, el, date_bin) %>% 
+#   summarise("Gini-chewing damage" = Gini(D1_p),
+#     "Gini-piercing/sucking" = Gini(D2_p),
+#     "Gini-adult beetle" = Gini(D3_p),
+#     "Gini-beetle mines" = Gini(D6_p),
+#     "Gini-fly mines" = Gini(D7_p)) %>% 
+#   mutate(date_bin = as.factor(date_bin),
+#     date_bin = fct_relevel(date_bin, "Early", "Mid", "Late")
+# )
+
+# gini_date_fxn <- function(y_col, x_col, data) {
+
+# ggplot(date_bin_df, aes(x = el, y = .data[[y_col]]))+
+#   facet_wrap(~date_bin)+
+#   geom_point(size = 2)+
+#   geom_smooth(method = 'gam', formula = y ~ s (x, k =4))+
+#   theme_bw()+
+#   labs(title = paste(y_col),
+#     x = "Elevation (m)")+
+#   theme(title = element_text(size = 18),
+#    axis.text = element_text(size = 16),
+#    strip.text = element_text(size = 16)
+    
+#     )+
+#   ylim(0,1)
+# }
+  
+# y_variables = c('Gini-chewing damage','Gini-piercing/sucking', 'Gini-adult beetle', 'Gini-beetle mines', 'Gini-fly mines')
+# gini_date_plots <- map(y_variables, ~ gini_date_fxn(data = date_bin_df, x_col = el, y_col = .x))
+# gini_date_plots[[3]]
+
+# Damage binned by time 
+# final_cp %>% 
+#   select(1:13)%>% 
+#   mutate(month_num = month(Date),
+#   date_bin = case_when(
+#     month_num %in% c(4) ~ "Early",
+#     month_num %in% c(5,6) ~ "Mid", 
+#     month_num %in% c(7,8) ~ "Late"
+#   )) %>%  
+#   mutate(date_bin = as.factor(date_bin),
+#     date_bin = fct_relevel(date_bin, "Early", "Mid", "Late")) %>% 
+#   group_by(qid, el, date_bin)
+
+# return ####
 
 return(list(
   tags_complete = tags_complete,
-  final_cp = final_cp,
+  full_data_df = full_data_df,
   e_df = e_df,
-  max_value_df = max_value_df))
+  max_value_df = max_value_df,
+  tag_df = tag_df,
+  qid_df = qid_df))
   
 #   tags_complete <- as_tibble(tags_complete)
 # return(tags_complete)
