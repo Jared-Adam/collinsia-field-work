@@ -453,6 +453,27 @@ y_variables = c('Gini-chewing damage','Gini-piercing/sucking', 'Gini-adult beetl
 gini_date_plots <- map(y_variables, ~ gini_date_fxn(data = date_bin_df, x_col = el, y_col = .x))
 gini_date_plots[[3]]
 
+# Damage binned by time 
+final_cp %>% 
+  select(1:13)%>% 
+  mutate(month_num = month(Date),
+  date_bin = case_when(
+    month_num %in% c(4) ~ "Early",
+    month_num %in% c(5,6) ~ "Mid", 
+    month_num %in% c(7,8) ~ "Late"
+  )) %>%  
+  mutate(date_bin = as.factor(date_bin),
+    date_bin = fct_relevel(date_bin, "Early", "Mid", "Late")) %>% 
+  group_by(qid, el, date_bin)
+
+
+
+
+
+
+
+
+# take the sum of all at tag level and then take max (max of sums, not sums of maxes)
 
 
 
@@ -464,10 +485,28 @@ gini_df %>%
     max_2 = max(D2_p),
     max_3 = max(D3_p),
     max_6 = max(D6_p), 
-    max_7 = max(D7_p)) %>% 
-  summarise(g1 = Gini(max_1, na.rm = TRUE),
+    max_7 = max(D7_p),
+    elevation = first(el),
+    q = first(qid)) %>% 
+  # ggplot(aes(x = elevation, y = max_1))+
+  # geom_point(size = 2)+
+  # geom_smooth(method = 'gam', formula = y~s (x, k =4))
+  group_by(q) %>% 
+  summarise(g1 = Gini(max_1),
     g2 = Gini(max_2, na.rm = TRUE),
     g3 = Gini(max_3, na.rm = TRUE),
     g6 = Gini(max_6, na.rm = TRUE),
-    g7 = Gini(max_7, na.rm = TRUE))
+    g7 = Gini(max_7, na.rm = TRUE)) 
 
+gini_df %>% 
+  group_by(Tag) %>% 
+  summarise(sd_1 = sd(D1_p),
+    sd_2 = sd(D2_p),
+    sd_3 = sd(D3_p),
+    sd_6 = sd(D6_p), 
+    sd_7 = sd(D7_p)) %>% 
+  summarise(g1 = Gini(sd_1, na.rm = TRUE),
+    g2 = Gini(sd_2, na.rm = TRUE),
+    g3 = Gini(sd_3, na.rm = TRUE),
+    g6 = Gini(sd_6, na.rm = TRUE),
+    g7 = Gini(sd_7, na.rm = TRUE))
